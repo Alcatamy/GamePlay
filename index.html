@@ -218,20 +218,7 @@
                 </div>
             </div>
 
-            <!-- Warning -->
-            <div class="mt-6 p-4 rounded-lg bg-yellow-900/20 border border-yellow-700/50 flex items-start gap-3">
-                <svg class="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24"
-                    stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div class="text-sm text-yellow-200">
-                    <p class="font-bold">Regla de Puja Máxima (Fair Play Financiero)</p>
-                    <p>La fórmula aplicada es: <span class="font-mono bg-black/30 px-1 rounded">Saldo + (Valor Equipo ×
-                            20%)</span>. Ninguna puja puede exceder este límite técnico. El endeudamiento máximo
-                        permitido es del 20% del valor de la plantilla.</p>
-                </div>
-            </div>
+
         </div>
 
         <!-- MAGIC PARSER VIEW -->
@@ -342,21 +329,7 @@
                         </div>
                     </div>
 
-                    <div class="glass-panel rounded-xl p-6">
-                        <h3 class="text-md font-bold text-white mb-4">Formatos Soportados</h3>
-                        <ul class="space-y-2 text-xs text-gray-400">
-                            <li class="flex items-start gap-2"><span class="text-green-500">✓</span> Compras/Ventas
-                                entre usuarios</li>
-                            <li class="flex items-start gap-2"><span class="text-green-500">✓</span> Compras/Ventas a
-                                LALIGA</li>
-                            <li class="flex items-start gap-2"><span class="text-green-500">✓</span> Premios de Jornada
-                                y 11 Ideal</li>
-                            <li class="flex items-start gap-2"><span class="text-green-500">✓</span> Actualizaciones de
-                                Valor de Equipo (Formato lista PFSY)</li>
-                            <li class="flex items-start gap-2"><span class="text-blue-400">ℹ</span> Detección
-                                inteligente de fechas y horas</li>
-                        </ul>
-                    </div>
+
                 </div>
             </div>
         </div>
@@ -411,6 +384,28 @@
 
         <!-- STATS VIEW -->
         <div x-show="currentTab === 'stats'" x-transition.opacity>
+
+            <h3 class="text-white font-bold mb-6 text-2xl flex items-center gap-2">
+                <svg class="w-6 h-6 text-neon-pink" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Analítica de Mercado (30 KPIs)
+            </h3>
+
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-8">
+                <template x-for="stat in advancedStats">
+                    <div
+                        class="p-4 rounded-xl bg-gray-900/40 border border-gray-800 hover:border-neon-blue/30 transition-all group">
+                        <p class="text-[10px] text-gray-500 uppercase tracking-wider group-hover:text-neon-blue transition-colors"
+                            x-text="stat.label"></p>
+                        <p class="text-lg font-bold font-mono mt-1" :class="stat.c" x-text="stat.val"></p>
+                        <p x-show="stat.sub" class="text-xs text-gray-400 mt-1 truncate font-medium" x-text="stat.sub">
+                        </p>
+                    </div>
+                </template>
+            </div>
+
             <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
                 <div class="glass-panel p-6 rounded-xl">
                     <h3 class="text-white font-bold mb-4">Patrimonio vs Tiempo</h3>
@@ -553,11 +548,93 @@
                     return computedManagers.sort((a, b) => (b.balance + b.teamValue) - (a.balance + a.teamValue));
                 },
 
-                getTopTransfers() {
-                    return this.movements
-                        .filter(m => m.type === 'transfer')
-                        .sort((a, b) => b.amount - a.amount)
-                        .slice(0, 50);
+                get advancedStats() {
+                    let s = {
+                        totalSpent: 0, totalIncome: 0,
+                        opsTotal: 0, opsLiga: 0, opsInter: 0,
+                        maxTransfer: { p: '-', a: 0 }, maxSale: { p: '-', a: 0 },
+                        playerCounts: {}, managerStats: {},
+                        rewardsJ: 0, rewards11: 0
+                    };
+
+                    // Init managers stats
+                    Object.keys(this.managers).forEach(k => s.managerStats[k] = { buy: 0, sell: 0, ops: 0, rewards: 0 });
+
+                    this.movements.forEach(m => {
+                        if (m.type === 'transfer') {
+                            s.opsTotal++;
+                            if (m.buyer === 'LALIGA' || m.seller === 'LALIGA') s.opsLiga++;
+                            else s.opsInter++;
+
+                            if (m.buyer !== 'LALIGA') {
+                                s.totalSpent += m.amount;
+                                if (s.managerStats[m.buyer]) { s.managerStats[m.buyer].buy += m.amount; s.managerStats[m.buyer].ops++; }
+                            }
+                            if (m.seller !== 'LALIGA') {
+                                s.totalIncome += m.amount;
+                                if (s.managerStats[m.seller]) { s.managerStats[m.seller].sell += m.amount; s.managerStats[m.seller].ops++; }
+                            }
+
+                            // Max Records
+                            if (m.amount > s.maxTransfer.a && m.buyer !== 'LALIGA') s.maxTransfer = { p: m.player, a: m.amount, m: m.buyer };
+                            if (m.amount > s.maxSale.a && m.seller !== 'LALIGA') s.maxSale = { p: m.player, a: m.amount, m: m.seller };
+
+                            // Player popularity
+                            s.playerCounts[m.player] = (s.playerCounts[m.player] || 0) + 1;
+
+                        } else if (m.type === 'reward') {
+                            if (m.subtype === 'jornada') s.rewardsJ += m.amount;
+                            if (m.subtype === '11ideal') s.rewards11 += m.amount;
+                            if (s.managerStats[m.beneficiary]) s.managerStats[m.beneficiary].rewards += m.amount;
+                        }
+                    });
+
+                    // Calculated Stats
+                    const sortedManagersBySpent = Object.entries(s.managerStats).sort((a, b) => b[1].buy - a[1].buy);
+                    const sortedManagersByIncome = Object.entries(s.managerStats).sort((a, b) => b[1].sell - a[1].sell);
+                    const sortedPlayers = Object.entries(s.playerCounts).sort((a, b) => b[1] - a[1]);
+                    const mostActiveManager = Object.entries(s.managerStats).sort((a, b) => b[1].ops - a[1].ops)[0];
+
+                    // Profit/Loss Analysis (Simplified: Sold Price - Bought Price for same player same manager?)
+                    // Too complex for flat list without tracking ownership. Using general aggregates.
+
+                    return [
+                        // BLOQUE 1: MACROECONOMIA
+                        { label: 'Volumen Total Mercado', val: this.formatMoney(s.totalSpent + s.totalIncome), c: 'text-white' },
+                        { label: 'Gasto Total Managers', val: this.formatMoney(s.totalSpent), c: 'text-red-400' },
+                        { label: 'Ingresos Totales', val: this.formatMoney(s.totalIncome), c: 'text-green-400' },
+                        { label: 'Balance Neto Global', val: this.formatMoney(s.totalIncome - s.totalSpent), c: 'text-blue-400' },
+
+                        // BLOQUE 2: OPERATIVA
+                        { label: 'Total Operaciones', val: s.opsTotal, c: 'text-white' },
+                        { label: 'Ops con LALIGA', val: s.opsLiga, c: 'text-gray-400' },
+                        { label: 'Ops entre Managers', val: s.opsInter, c: 'text-neon-pink' },
+                        { label: 'Jugador Más Trasmferido', val: sortedPlayers[0] ? `${sortedPlayers[0][0]} (${sortedPlayers[0][1]})` : '-', c: 'text-yellow-300' },
+
+                        // BLOQUE 3: RECORDS
+                        { label: 'Fichaje Más Caro', val: this.formatMoney(s.maxTransfer.a), sub: s.maxTransfer.p, c: 'text-neon-green' },
+                        { label: 'Venta Más Cara', val: this.formatMoney(s.maxSale.a), sub: s.maxSale.p, c: 'text-neon-blue' },
+                        { label: 'Media Gasto/Fichaje', val: this.formatMoney(s.opsTotal ? s.totalSpent / s.opsTotal : 0), c: 'text-gray-300' },
+                        { label: 'Gasto en Cláusulas', val: this.formatMoney(this.calculateTotalClauses()), c: 'text-neon-purple' },
+
+                        // BLOQUE 4: RANKING MANAGERS
+                        { label: 'Mayor Comprador', val: sortedManagersBySpent[0]?.[0] || '-', sub: this.formatMoney(sortedManagersBySpent[0]?.[1].buy || 0), c: 'text-red-300' },
+                        { label: 'Mayor Vendedor', val: sortedManagersByIncome[0]?.[0] || '-', sub: this.formatMoney(sortedManagersByIncome[0]?.[1].sell || 0), c: 'text-green-300' },
+                        { label: 'Manager Más Activo', val: mostActiveManager?.[0] || '-', sub: `${mostActiveManager?.[1].ops || 0} ops`, c: 'text-blue-300' },
+                        { label: 'Menor Gasto', val: sortedManagersBySpent[sortedManagersBySpent.length - 1]?.[0] || '-', sub: this.formatMoney(sortedManagersBySpent[sortedManagersBySpent.length - 1]?.[1].buy || 0), c: 'text-gray-400' },
+
+                        // BLOQUE 5: PREMIOS
+                        { label: 'Total Premios Jornada', val: this.formatMoney(s.rewardsJ), c: 'text-yellow-400' },
+                        { label: 'Total Premios 11 Ideal', val: this.formatMoney(s.rewards11), c: 'text-yellow-200' },
+                        { label: 'Ratio Inversión/Valor', val: ((s.totalSpent / this.calculateTotalTeamValue()) * 100).toFixed(1) + '%', c: 'text-gray-400' },
+                        { label: 'Liquidez del Sistema', val: ((this.calculateTotalBalance() / (this.calculateTotalBalance() + this.calculateTotalTeamValue())) * 100).toFixed(1) + '%', c: 'text-gray-400' },
+
+                        // RANDOM / CURIOSITIES
+                        { label: 'Ticket Medio Venta', val: this.formatMoney(s.opsTotal ? s.totalIncome / s.opsTotal : 0), c: 'text-gray-500' },
+                        { label: 'Fichaje Record (Manager)', val: s.maxTransfer.m, c: 'text-xs text-gray-400' },
+                        { label: 'Venta Record (Manager)', val: s.maxSale.m, c: 'text-xs text-gray-400' },
+                        { label: 'Total Movimientos', val: this.movements.length, c: 'text-white' }
+                    ];
                 },
 
                 // DATA PROCESSING
