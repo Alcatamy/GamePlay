@@ -1,0 +1,17 @@
+# Datos y logs
+*.txt
+*.xml
+*.log
+Gasto en cláusulas
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Cache y temporales
+__pycache__/
+*.pyc
+
+# IDEs
+.vscode/
+.idea/

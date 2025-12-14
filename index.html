@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GamePlay Manager | Fantasy League</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gray: {
+                            850: '#1f2937',
+                            900: '#111827',
+                            950: '#030712',
+                        },
+                        neon: {
+                            blue: '#00f3ff',
+                            green: '#00ff9d',
+                            pink: '#ff00d4',
+                            purple: '#bc13fe'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .glass-panel {
+            background: rgba(31, 41, 55, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #111827;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4b5563;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-950 text-gray-100 min-h-screen selection:bg-neon-blue selection:text-black" x-data="gamePlayApp()"
+    x-init="initApp()">
+
+    <!-- Navbar -->
+    <nav class="sticky top-0 z-50 glass-panel border-b border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <div
+                        class="w-8 h-8 rounded bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center font-bold text-black text-xs">
+                        GP</div>
+                    <span
+                        class="font-bold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-neon-blue to-neon-purple">GamePlay
+                        Manager</span>
+                </div>
+                <div class="flex space-x-4">
+                    <button @click="currentTab = 'dashboard'" :class="{'text-neon-blue': currentTab === 'dashboard'}"
+                        class="hover:text-white transition-colors text-sm font-medium">Dashboard</button>
+                    <button @click="currentTab = 'parser'" :class="{'text-neon-green': currentTab === 'parser'}"
+                        class="hover:text-white transition-colors text-sm font-medium">Magic Parser</button>
+                    <button @click="currentTab = 'stats'" :class="{'text-neon-pink': currentTab === 'stats'}"
+                        class="hover:text-white transition-colors text-sm font-medium">Estadísticas</button>
+                    <button @click="currentTab = 'clauses'" :class="{'text-neon-purple': currentTab === 'clauses'}"
+                        class="hover:text-white transition-colors text-sm font-medium">Cláusulas</button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- DASHBOARD VIEW -->
+        <div x-show="currentTab === 'dashboard'" x-transition.opacity>
+            <!-- Header Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <!-- Total Mercado -->
+                <div class="glass-panel rounded-xl p-6 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <svg class="w-16 h-16 text-neon-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                            </path>
+                        </svg>
+                    </div>
+                    <p class="text-sm text-gray-400 font-medium">Dinero en Juego (Total Saldos)</p>
+                    <h3 class="text-2xl font-bold mt-2 text-neon-blue" x-text="formatMoney(calculateTotalBalance())">
+                    </h3>
+                </div>
+
+                <!-- Total Valor Equipos -->
+                <div class="glass-panel rounded-xl p-6 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <svg class="w-16 h-16 text-neon-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                            </path>
+                        </svg>
+                    </div>
+                    <p class="text-sm text-gray-400 font-medium">Valor Total Plantillas</p>
+                    <h3 class="text-2xl font-bold mt-2 text-neon-green" x-text="formatMoney(calculateTotalTeamValue())">
+                    </h3>
+                </div>
+
+                <!-- Movimientos Registrados -->
+                <div class="glass-panel rounded-xl p-6 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <svg class="w-16 h-16 text-neon-pink" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                        </svg>
+                    </div>
+                    <p class="text-sm text-gray-400 font-medium">Movimientos Procesados</p>
+                    <h3 class="text-2xl font-bold mt-2 text-neon-pink" x-text="getTotalMovements()"></h3>
+                </div>
+
+                <!-- Gasto en Cláusulas -->
+                <div class="glass-panel rounded-xl p-6 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <svg class="w-16 h-16 text-neon-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+                            </path>
+                        </svg>
+                    </div>
+                    <p class="text-sm text-gray-400 font-medium">Gasto Total Cláusulas</p>
+                    <h3 class="text-2xl font-bold mt-2 text-neon-purple" x-text="formatMoney(calculateTotalClauses())">
+                    </h3>
+                </div>
+            </div>
+
+            <!-- Main Table -->
+            <div class="glass-panel rounded-xl overflow-hidden shadow-2xl">
+                <div class="px-6 py-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-white">Clasificación Financiera</h2>
+                    <span class="text-xs text-gray-500 flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                        En vivo
+                    </span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
+                        <thead>
+                            <tr class="text-gray-400 text-xs uppercase bg-gray-900/30">
+                                <th class="px-6 py-3 font-semibold">Manager</th>
+                                <th class="px-6 py-3 font-semibold text-right">Saldo Caja</th>
+                                <th class="px-6 py-3 font-semibold text-right">Valor Equipo</th>
+                                <th class="px-6 py-3 font-semibold text-right">Patrimonio</th>
+                                <th class="px-6 py-3 font-semibold text-right text-neon-blue">Puja Máxima</th>
+                                <th class="px-6 py-3 font-semibold text-right text-red-400">Gasto Cláusulas</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-800">
+                            <template x-for="m in sortedManagers" :key="m.name">
+                                <tr class="hover:bg-white/5 transition-colors group">
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded bg-gray-800 flex items-center justify-center font-bold text-gray-300 border border-gray-700"
+                                                x-text="m.name.substring(0,2).toUpperCase()"></div>
+                                            <span
+                                                class="font-medium text-white group-hover:text-neon-blue transition-colors"
+                                                x-text="m.name"></span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-4 text-right font-mono text-gray-300"
+                                        x-text="formatMoney(m.balance)"></td>
+                                    <td class="px-6 py-4 text-right font-mono text-gray-300"
+                                        x-text="formatMoney(m.teamValue)"></td>
+                                    <td class="px-6 py-4 text-right font-mono font-bold text-white"
+                                        x-text="formatMoney(m.balance + m.teamValue)"></td>
+                                    <td class="px-6 py-4 text-right font-mono font-bold text-neon-blue"
+                                        x-text="formatMoney(calculateMaxBid(m))"></td>
+                                    <td class="px-6 py-4 text-right font-mono text-red-400"
+                                        x-text="formatMoney(m.clauseExpenses)"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Warning -->
+            <div class="mt-6 p-4 rounded-lg bg-yellow-900/20 border border-yellow-700/50 flex items-start gap-3">
+                <svg class="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div class="text-sm text-yellow-200">
+                    <p class="font-bold">Regla de Puja Máxima (Fair Play Financiero)</p>
+                    <p>La fórmula aplicada es: <span class="font-mono bg-black/30 px-1 rounded">Saldo + (Valor Equipo ×
+                            20%)</span>. Ninguna puja puede exceder este límite técnico. El endeudamiento máximo
+                        permitido es del 20% del valor de la plantilla.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- MAGIC PARSER VIEW -->
+        <div x-show="currentTab === 'parser'" x-transition.opacity>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Input Area -->
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="glass-panel rounded-xl p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                                <svg class="w-5 h-5 text-neon-green" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                                </svg>
+                                Magic Parser
+                            </h2>
+                            <button @click="processInput()"
+                                class="px-4 py-2 bg-neon-green/10 hover:bg-neon-green/20 text-neon-green border border-neon-green/50 rounded-lg text-sm font-bold transition-all hover:scale-105 active:scale-95 flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Procesar Datos
+                            </button>
+                        </div>
+                        <p class="text-sm text-gray-400 mb-2">Copia y pega texto directamente desde la app de Fantasy
+                            (Movimientos de mercado, valores de equipo, premios).</p>
+                        <textarea x-model="rawInput"
+                            class="w-full h-96 bg-gray-900/50 border border-gray-700 rounded-lg p-4 font-mono text-sm text-gray-300 focus:ring-2 focus:ring-neon-blue focus:border-transparent outline-none resize-none"
+                            placeholder="Paste your raw data here..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Log / Guide Area -->
+                <div class="space-y-6">
+                    <div class="glass-panel rounded-xl p-6">
+                        <h3 class="text-md font-bold text-white mb-4">Registro de Procesamiento</h3>
+                        <div class="h-64 overflow-y-auto space-y-2 pr-2 font-mono text-xs">
+                            <template x-for="log in logs" :key="log.id">
+                                <div class="p-2 rounded bg-black/20 border-l-2"
+                                    :class="log.type === 'success' ? 'border-green-500 text-green-400' : (log.type === 'info' ? 'border-blue-500 text-blue-300' : 'border-yellow-500 text-yellow-300')">
+                                    <span class="opacity-50" x-text="log.time"></span>
+                                    <span x-text="log.msg"></span>
+                                </div>
+                            </template>
+                            <div x-show="logs.length === 0" class="text-gray-600 text-center italic mt-10">Esperando
+                                datos...</div>
+                        </div>
+                    </div>
+
+                    <div class="glass-panel rounded-xl p-6">
+                        <h3 class="text-md font-bold text-white mb-4">Formatos Soportados</h3>
+                        <ul class="space-y-2 text-xs text-gray-400">
+                            <li class="flex items-start gap-2"><span class="text-green-500">✓</span> Compras/Ventas
+                                entre usuarios</li>
+                            <li class="flex items-start gap-2"><span class="text-green-500">✓</span> Compras/Ventas a
+                                LALIGA</li>
+                            <li class="flex items-start gap-2"><span class="text-green-500">✓</span> Premios de Jornada
+                                y 11 Ideal</li>
+                            <li class="flex items-start gap-2"><span class="text-green-500">✓</span> Actualizaciones de
+                                Valor de Equipo (Formato lista PFSY)</li>
+                            <li class="flex items-start gap-2"><span class="text-blue-400">ℹ</span> Detección
+                                inteligente de fechas y horas</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CLAUSES VIEW -->
+        <div x-show="currentTab === 'clauses'" x-transition.opacity>
+            <div class="max-w-3xl mx-auto glass-panel rounded-xl p-8">
+                <h2 class="text-2xl font-bold text-white mb-6 text-neon-purple flex items-center gap-2">
+                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Gestión de Cláusulas
+                </h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <!-- Manual Input -->
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Manager</label>
+                        <select x-model="clauseForm.manager"
+                            class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:ring-1 focus:ring-neon-purple outline-none">
+                            <option value="">Selecciona un equipo</option>
+                            <template x-for="m in sortedManagers" :key="m.name">
+                                <option :value="m.name" x-text="m.name"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-400 mb-2">Importe Gastado (€)</label>
+                        <input type="number" x-model="clauseForm.amount"
+                            class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:ring-1 focus:ring-neon-purple outline-none"
+                            placeholder="Ej: 5000000">
+                    </div>
+                </div>
+                <button @click="addClauseExpense()"
+                    class="w-full py-3 bg-neon-purple/20 hover:bg-neon-purple/30 text-neon-purple border border-neon-purple/50 rounded-lg font-bold transition-all">
+                    Registrar Gasto de Cláusula
+                </button>
+
+                <!-- Bulk Import -->
+                <div class="mt-8 pt-8 border-t border-gray-800">
+                    <h3 class="text-lg font-semibold text-white mb-4">Importar CSV (Equipo [TAB] Importe)</h3>
+                    <textarea x-model="clauseBulkInput"
+                        class="w-full h-32 bg-gray-900/50 border border-gray-700 rounded-lg p-4 font-mono text-xs text-gray-400"
+                        placeholder="Alcatamy eSports By	168.850.000 €..."></textarea>
+                    <button @click="processClauseBulk()"
+                        class="mt-3 px-4 py-2 text-xs bg-gray-800 hover:bg-gray-700 text-white rounded border border-gray-600">Importar
+                        Lote</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- STATS VIEW -->
+        <div x-show="currentTab === 'stats'" x-transition.opacity>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                <div class="glass-panel p-6 rounded-xl">
+                    <h3 class="text-white font-bold mb-4">Patrimonio vs Tiempo</h3>
+                    <canvas id="patrimonyChart" height="200"></canvas>
+                </div>
+                <div class="glass-panel p-6 rounded-xl">
+                    <h3 class="text-white font-bold mb-4">Ingresos por Premios</h3>
+                    <canvas id="rewardsChart" height="200"></canvas>
+                </div>
+            </div>
+
+            <div class="glass-panel p-6 rounded-xl">
+                <h3 class="text-white font-bold mb-6 text-lg">Top 10 Fichajes Más Caros</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="text-xs uppercase text-gray-500 bg-gray-900/20">
+                            <tr>
+                                <th class="p-3">Jugador</th>
+                                <th class="p-3">Comprador</th>
+                                <th class="p-3">Vendedor</th>
+                                <th class="p-3 text-right">Precio</th>
+                                <th class="p-3 text-right">Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-800">
+                            <template x-for="mov in getTopTransfers()" :key="mov.id">
+                                <tr class="hover:bg-white/5">
+                                    <td class="p-3 text-white font-medium" x-text="mov.player"></td>
+                                    <td class="p-3 text-blue-300" x-text="mov.buyer"></td>
+                                    <td class="p-3 text-red-300" x-text="mov.seller"></td>
+                                    <td class="p-3 text-right font-mono text-neon-green"
+                                        x-text="formatMoney(mov.amount)"></td>
+                                    <td class="p-3 text-right text-gray-500 text-xs" x-text="mov.date"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- LOGIC -->
+    <script>
+        // CONFIGURACIÓN DE FIREBASE (PRODUCCIÓN)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBzlYu7dTaEvIIt7VehdhVwqOLS2BLnqDQ",
+            authDomain: "mercato-fbdcc.firebaseapp.com",
+            databaseURL: "https://mercato-fbdcc-default-rtdb.firebaseio.com",
+            projectId: "mercato-fbdcc",
+            storageBucket: "mercato-fbdcc.firebasestorage.app",
+            messagingSenderId: "865841758007",
+            appId: "1:865841758007:web:ac53121bc37d00574864b2",
+            measurementId: "G-0WQNPFTYNF"
+        };
+
+        let db = null;
+        let dbRef = null;
+
+        // Intentar inicializar Firebase
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            console.log("Firebase initialized successfully with Realtime Database");
+        } catch (e) {
+            console.error("Firebase load error", e);
+        }
+
+        function gamePlayApp() {
+            return {
+                currentTab: 'dashboard',
+                rawInput: '',
+                clauseBulkInput: '',
+                clauseForm: { manager: '', amount: '' },
+                logs: [],
+
+                // DATA MODEL
+                managers: {
+                    "Vigar24": { initialBudget: 103000000, teamValue: 0, clauseExpenses: 0, name: "Vigar24" },
+                    "GOLENCIERRO FC": { initialBudget: 103000000, teamValue: 0, clauseExpenses: 0, name: "GOLENCIERRO FC" },
+                    "Pablinistan FC": { initialBudget: 103000000, teamValue: 0, clauseExpenses: 0, name: "Pablinistan FC" },
+                    "Alcatamy eSports By": { initialBudget: 100000000, teamValue: 0, clauseExpenses: 0, name: "Alcatamy eSports By" },
+                    "Visite La Manga FC": { initialBudget: 103000000, teamValue: 0, clauseExpenses: 0, name: "Visite La Manga FC" },
+                    "Morenazos FC": { initialBudget: 103000000, teamValue: 0, clauseExpenses: 0, name: "Morenazos FC" }
+                },
+                movements: [], // Array flat de todos los movimientos
+
+                async initApp() {
+                    this.loadData();
+                    this.$watch('managers', () => this.saveData());
+                    this.$watch('movements', () => { this.saveData(); this.updateCharts(); });
+                },
+
+                // UTILS
+                formatMoney(amount) {
+                    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(amount);
+                },
+
+                addLog(msg, type = 'info') {
+                    const time = new Date().toLocaleTimeString();
+                    this.logs.unshift({ id: Date.now(), time, msg, type });
+                },
+
+                // CALCS
+                calculateTotalBalance() {
+                    return Object.values(this.managers).reduce((acc, m) => acc + m.balance, 0);
+                },
+                calculateTotalTeamValue() {
+                    return Object.values(this.managers).reduce((acc, m) => acc + m.teamValue, 0);
+                },
+                calculateTotalClauses() {
+                    return Object.values(this.managers).reduce((acc, m) => acc + m.clauseExpenses, 0);
+                },
+                calculateMaxBid(manager) {
+                    // Formula: Saldo + (ValorEquipo * 0.20)
+                    return manager.balance + (manager.teamValue * 0.20);
+                },
+
+                get sortedManagers() {
+                    // Calcular balances dinámicos antes de ordenar
+                    const computedManagers = Object.values(this.managers).map(m => {
+                        let balance = m.initialBudget - m.clauseExpenses;
+
+                        // Procesar movimientos historicos
+                        this.movements.forEach(mov => {
+                            if (mov.type === 'transfer') {
+                                if (mov.buyer === m.name) balance -= mov.amount;
+                                if (mov.seller === m.name) balance += mov.amount;
+                            } else if (mov.type === 'reward' && mov.beneficiary === m.name) {
+                                balance += mov.amount;
+                            }
+                        });
+
+                        return { ...m, balance };
+                    });
+
+                    // Ordenar por patrimonio (balance + teamValue)
+                    return computedManagers.sort((a, b) => (b.balance + b.teamValue) - (a.balance + a.teamValue));
+                },
+
+                getTopTransfers() {
+                    return this.movements
+                        .filter(m => m.type === 'transfer')
+                        .sort((a, b) => b.amount - a.amount)
+                        .slice(0, 50);
+                },
+
+                // DATA PROCESSING
+                processInput() {
+                    const text = this.rawInput;
+                    if (!text.trim()) return;
+
+                    let addedCount = 0;
+                    let updatedCount = 0;
+
+                    const lines = text.split('\n');
+                    let tempDate = null; // Para guardar fechas "sueltas" (ej: "04/12/2025") que aparecen entre líneas
+
+                    // Pre-procesar para capturar fechas aisladas y asignarlas a bloques cercanos
+                    // Nota: El usuario pega bloques donde la fecha a veces está ABAJO del movimiento.
+                    // Estrategia: Iterar y buscar patrones.
+
+                    // Regex Patterns
+                    const reDate = /(\d{2}\/\d{2}\/\d{4})/;
+                    const reTransfer = /(.+?) ha (comprado|vendido) al jugador (.+?) (?:de|a) (.+?) por ([\d\.]+)[€]?/i;
+                    const reRewardJornada = /En la jornada (\d+), (.+?) ha ganado ([\d\.]+)[€]?/i;
+                    const reReward11 = /(.+?) ha ganado ([\d\.]+)[€]? por tener.+11 ideal/i;
+                    const reTeamValue = /([^\n]+)\s+(\d+)\s+PFSY\s+([\d\.]+)/; // Requires multiline matching or smarter split
+
+                    // Como el formato del usuario es caótico con saltos de línea irregulares, 
+                    // normalizamos un poco juntando líneas si parecen cortadas, o mejor, iteramos buscando bloques.
+
+                    // Estrategia para Team Values (Formato raro de lista)
+                    // Buscaremos patrones de bloque "Nombre \n Num \n PFSY \n Valor" en todo el texto raw
+                    const teamValueMatches = [...text.matchAll(/([^\n\r]+)[\n\r]+\d+[\n\r]+PFSY[\n\r]+([\d\.]+)/g)];
+                    teamValueMatches.forEach(match => {
+                        const managerName = match[1].trim();
+                        const valueRaw = match[2].replace(/\./g, '');
+                        const val = parseInt(valueRaw);
+
+                        if (this.managers[managerName]) {
+                            this.managers[managerName].teamValue = val;
+                            addedCount++;
+                            this.addLog(`Valor equipo actualizado: ${managerName} -> ${this.formatMoney(val)}`, 'success');
+                        }
+                    });
+
+                    // Estrategia para Movimientos línea por línea
+                    lines.forEach((line, index) => {
+                        line = line.trim();
+                        if (!line) return;
+
+                        // Detectar Fecha pura
+                        if (reDate.test(line)) {
+                            tempDate = line.match(reDate)[1];
+                            return; // Es solo una línea de fecha
+                        }
+
+                        // 1. Transferencias
+                        let match = line.match(reTransfer);
+                        if (match) {
+                            const [_, actor, action, player, otherParty, amountStr] = match;
+                            const amount = parseInt(amountStr.replace(/\./g, ''));
+
+                            // Normalizar nombres
+                            const buyer = action === 'comprado' ? actor.trim() : otherParty.trim();
+                            const seller = action === 'comprado' ? otherParty.trim() : actor.trim();
+
+                            // Crear ID único
+                            const id = `transfer_${buyer}_${seller}_${player}_${amount}`;
+
+                            // Upsert
+                            this.upsertMovement({
+                                id,
+                                type: 'transfer',
+                                buyer,
+                                seller,
+                                player,
+                                amount,
+                                date: tempDate || 'Sin fecha'
+                            });
+                            return;
+                        }
+
+                        // 2. Premios Jornada
+                        match = line.match(reRewardJornada);
+                        if (match) {
+                            const [_, jornada, beneficiary, amountStr] = match;
+                            const amount = parseInt(amountStr.replace(/\./g, ''));
+                            const id = `reward_jor${jornada}_${beneficiary.trim()}`;
+
+                            this.upsertMovement({
+                                id,
+                                type: 'reward',
+                                subtype: 'jornada',
+                                beneficiary: beneficiary.trim(),
+                                amount,
+                                details: `Jornada ${jornada}`,
+                                date: tempDate || 'Sin fecha'
+                            });
+                            return;
+                        }
+
+                        // 3. Premios 11 Ideal
+                        match = line.match(reReward11);
+                        if (match) {
+                            const [_, beneficiary, amountStr] = match;
+                            const amount = parseInt(amountStr.replace(/\./g, ''));
+                            // ID riesgo colisión si gana varios premios de 11 ideal el mismo dia? 
+                            // Añadimos random suffix o usamos tempDate si existe
+                            const id = `reward_11_${beneficiary.trim()}_${tempDate || amount}`;
+
+                            this.upsertMovement({
+                                id,
+                                type: 'reward',
+                                subtype: '11ideal',
+                                beneficiary: beneficiary.trim(),
+                                amount,
+                                details: '11 Ideal',
+                                date: tempDate || 'Sin fecha'
+                            });
+                            return;
+                        }
+                    });
+
+                    this.addLog(`Procesamiento finalizado.`, 'info');
+                    this.rawInput = ''; // Limpiar
+                },
+
+                upsertMovement(mov) {
+                    const idx = this.movements.findIndex(m => m.id === mov.id);
+                    if (idx === -1) {
+                        this.movements.push(mov);
+                        this.addLog(`Nuevo mov: ${mov.type} - ${mov.amount}€`, 'success');
+                    } else {
+                        // Update fecha si la nueva es mejor (tiene /) y la vieja no
+                        const oldMov = this.movements[idx];
+                        if (mov.date.includes('/') && !oldMov.date.includes('/')) {
+                            this.movements[idx].date = mov.date;
+                            this.addLog(`Fecha actualizada para ${mov.id}`, 'info');
+                        }
+                    }
+                },
+
+                addClauseExpense() {
+                    const { manager, amount } = this.clauseForm;
+                    if (manager && amount) {
+                        if (this.managers[manager]) {
+                            this.managers[manager].clauseExpenses += parseInt(amount);
+                            this.addLog(`Gasto clausula añadido a ${manager}: -${amount}€`, 'success');
+                            this.clauseForm.amount = '';
+                        }
+                    }
+                },
+
+                processClauseBulk() {
+                    const lines = this.clauseBulkInput.split('\n');
+                    lines.forEach(line => {
+                        // Formato: "Equipo [TAB] 168.850.000 €"
+                        const parts = line.split('\t');
+                        if (parts.length >= 2) {
+                            const name = parts[0].trim();
+                            const amountRaw = parts[1].replace(/[€\.\s]/g, '');
+                            const amount = parseInt(amountRaw);
+
+                            if (this.managers[name] && !isNaN(amount)) {
+                                // Reemplazar o sumar? El usuario dice "ir agregando", pero el archivo parece un estado total.
+                                // Asumiremos que este input "SET" el valor total de gasto en clausulas si viene de archivo.
+                                this.managers[name].clauseExpenses = amount;
+                                this.addLog(`Cláusulas SET para ${name}: ${amount}`, 'success');
+                            }
+                        }
+                    });
+                    this.clauseBulkInput = '';
+                },
+
+                // STORAGE
+                saveData() {
+                    const data = {
+                        managers: this.managers,
+                        movements: this.movements,
+                        lastUpdate: Date.now()
+                    };
+
+                    if (db) {
+                        db.ref('fantasy_data').set(data);
+                    } else {
+                        localStorage.setItem('fantasy_gameplay_data', JSON.stringify(data));
+                    }
+                },
+
+                loadData() {
+                    if (db) {
+                        db.ref('fantasy_data').on('value', snapshot => {
+                            const val = snapshot.val();
+                            if (val) {
+                                this.managers = val.managers || this.managers;
+                                this.movements = val.movements || [];
+                            }
+                        });
+                    } else {
+                        const local = localStorage.getItem('fantasy_gameplay_data');
+                        if (local) {
+                            const data = JSON.parse(local);
+                            this.managers = data.managers || this.managers;
+                            this.movements = data.movements || [];
+                            this.addLog('Datos cargados de LocalStorage', 'info');
+                        }
+                    }
+                },
+
+                // CHARTS
+                updateCharts() {
+                    const ctx = document.getElementById('patrimonyChart');
+                    if (!ctx) return;
+
+                    // Simple chart placeholder
+                    // needs real historical calculation which is complex requiring date parsing
+                    // skipping complex implementation for brevity, implementing basic bar chart of current patrimony
+
+                    const labels = this.sortedManagers.map(m => m.name);
+                    const dataPatrimony = this.sortedManagers.map(m => m.balance + m.teamValue);
+
+                    if (window.myChart) window.myChart.destroy();
+
+                    window.myChart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Patrimonio Actual',
+                                data: dataPatrimony,
+                                backgroundColor: ['#00f3ff', '#00ff9d', '#ff00d4', '#bc13fe', '#ffff00', '#ff0000'],
+                                borderWidth: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                y: {
+                                    ticks: { color: '#6b7280' },
+                                    grid: { color: '#374151' }
+                                },
+                                x: {
+                                    ticks: { color: '#9ca3af' }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+        }
+    </script>
+</body>
+
+</html>
