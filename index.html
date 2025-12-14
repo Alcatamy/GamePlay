@@ -667,6 +667,7 @@
                     const reUltimateFormat = /^\[(\d{2}\/\d{2}\/\d{4})\] (.+)/; // Support for [DD/MM/YYYY] Msg
                     const reDate = /(\d{2}\/\d{2}\/\d{4})/;
                     const reTransfer = /(.+?) ha (comprado|vendido) al jugador (.+?) (?:de|a) (.+?) por ([\d\.]+)[€]?/;
+                    const reShield = /(.+?) ha blindado a (.+)/i;
                     const reRewardJornada = /En la jornada (\d+), (.+?) ha ganado ([\d\.]+)[€]?/i;
                     const reReward11 = /(.+?) ha ganado ([\d\.]+)[€]? por tener.+11 ideal/i;
                     const reTeamValue = /([^\n]+)\s+(\d+)\s+PFSY\s+([\d\.]+)/; // Requires multiline matching or smarter split
@@ -707,20 +708,19 @@
                             return;
                         }
 
+                        const dateKey = currentDateForLine || tempDate || 'NODATE';
+
                         // 1. Transferencias
                         let match = textToParse.match(reTransfer);
                         if (match) {
                             const [_, actor, action, player, otherParty, amountStr] = match;
                             const amount = parseInt(amountStr.replace(/\./g, ''));
-
-                            // Normalizar nombres
                             const buyer = action === 'comprado' ? actor.trim() : otherParty.trim();
                             const seller = action === 'comprado' ? otherParty.trim() : actor.trim();
 
-                            // Crear ID único
-                            const id = `transfer_${buyer}_${seller}_${player}_${amount}`;
+                            // ID UNIQUE with DATE
+                            const id = `transfer_${dateKey}_${buyer}_${seller}_${player}_${amount}`;
 
-                            // Stage (Check duplicates first)
                             if (!this.pendingMovements.some(pm => pm.id === id)) {
                                 this.pendingMovements.push({
                                     id,
@@ -729,13 +729,33 @@
                                     seller,
                                     player,
                                     amount,
-                                    date: currentDateForLine || 'Sin fecha'
+                                    date: dateKey !== 'NODATE' ? dateKey : 'Sin fecha'
                                 });
                             }
                             return;
                         }
 
-                        // 2. Premios Jornada
+                        // 2. Blindajes (Nuevo)
+                        match = textToParse.match(reShield);
+                        if (match) {
+                            const [_, manager, player] = match;
+                            const id = `shield_${dateKey}_${manager.trim()}_${player.trim()}`;
+
+                            if (!this.pendingMovements.some(pm => pm.id === id)) {
+                                this.pendingMovements.push({
+                                    id,
+                                    type: 'shield',
+                                    beneficiary: manager.trim(),
+                                    player: player.trim(),
+                                    amount: 0,
+                                    details: 'Blindaje',
+                                    date: dateKey !== 'NODATE' ? dateKey : 'Sin fecha'
+                                });
+                            }
+                            return;
+                        }
+
+                        // 3. Premios Jornada
                         match = textToParse.match(reRewardJornada);
                         if (match) {
                             const [_, jornada, beneficiary, amountStr] = match;
@@ -750,20 +770,19 @@
                                     beneficiary: beneficiary.trim(),
                                     amount,
                                     details: `Jornada ${jornada}`,
-                                    date: currentDateForLine || 'Sin fecha'
+                                    date: dateKey !== 'NODATE' ? dateKey : 'Sin fecha'
                                 });
                             }
                             return;
                         }
 
-                        // 3. Premios 11 Ideal
+                        // 4. Premios 11 Ideal
                         match = textToParse.match(reReward11);
                         if (match) {
                             const [_, beneficiary, amountStr] = match;
                             const amount = parseInt(amountStr.replace(/\./g, ''));
-                            // ID riesgo colisión si gana varios premios de 11 ideal el mismo dia? 
-                            // Añadimos random suffix o usamos tempDate si existe
-                            const id = `reward_11_${beneficiary.trim()}_${currentDateForLine || amount}`;
+                            // ID with date to avoid collisions
+                            const id = `reward_11_${beneficiary.trim()}_${dateKey}_${amount}`;
 
                             if (!this.pendingMovements.some(pm => pm.id === id)) {
                                 this.pendingMovements.push({
@@ -773,7 +792,7 @@
                                     beneficiary: beneficiary.trim(),
                                     amount,
                                     details: '11 Ideal',
-                                    date: currentDateForLine || 'Sin fecha'
+                                    date: dateKey !== 'NODATE' ? dateKey : 'Sin fecha'
                                 });
                             }
                             return;
