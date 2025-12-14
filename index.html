@@ -518,6 +518,7 @@
                     // Estrategia: Iterar y buscar patrones.
 
                     // Regex Patterns
+                    const reUltimateFormat = /^\[(\d{2}\/\d{2}\/\d{4})\] (.+)/; // Support for [DD/MM/YYYY] Msg
                     const reDate = /(\d{2}\/\d{2}\/\d{4})/;
                     const reTransfer = /(.+?) ha (comprado|vendido) al jugador (.+?) (?:de|a) (.+?) por ([\d\.]+)[€]?/i;
                     const reRewardJornada = /En la jornada (\d+), (.+?) ha ganado ([\d\.]+)[€]?/i;
@@ -545,16 +546,23 @@
                     // Estrategia para Movimientos línea por línea
                     lines.forEach((line, index) => {
                         line = line.trim();
-                        if (!line) return;
+                        if (!line || line.startsWith('#') || line.startsWith('---')) return; // Ignore headers
 
-                        // Detectar Fecha pura
-                        if (reDate.test(line)) {
+                        let currentDateForLine = tempDate;
+                        let textToParse = line;
+
+                        // Check for Ultimate format [Date] Text
+                        const ultimateMatch = line.match(reUltimateFormat);
+                        if (ultimateMatch) {
+                            currentDateForLine = ultimateMatch[1];
+                            textToParse = ultimateMatch[2];
+                        } else if (reDate.test(line)) {
                             tempDate = line.match(reDate)[1];
-                            return; // Es solo una línea de fecha
+                            return;
                         }
 
                         // 1. Transferencias
-                        let match = line.match(reTransfer);
+                        let match = textToParse.match(reTransfer);
                         if (match) {
                             const [_, actor, action, player, otherParty, amountStr] = match;
                             const amount = parseInt(amountStr.replace(/\./g, ''));
@@ -580,7 +588,7 @@
                         }
 
                         // 2. Premios Jornada
-                        match = line.match(reRewardJornada);
+                        match = textToParse.match(reRewardJornada);
                         if (match) {
                             const [_, jornada, beneficiary, amountStr] = match;
                             const amount = parseInt(amountStr.replace(/\./g, ''));
@@ -593,19 +601,19 @@
                                 beneficiary: beneficiary.trim(),
                                 amount,
                                 details: `Jornada ${jornada}`,
-                                date: tempDate || 'Sin fecha'
+                                date: currentDateForLine || 'Sin fecha'
                             });
                             return;
                         }
 
                         // 3. Premios 11 Ideal
-                        match = line.match(reReward11);
+                        match = textToParse.match(reReward11);
                         if (match) {
                             const [_, beneficiary, amountStr] = match;
                             const amount = parseInt(amountStr.replace(/\./g, ''));
                             // ID riesgo colisión si gana varios premios de 11 ideal el mismo dia? 
                             // Añadimos random suffix o usamos tempDate si existe
-                            const id = `reward_11_${beneficiary.trim()}_${tempDate || amount}`;
+                            const id = `reward_11_${beneficiary.trim()}_${currentDateForLine || amount}`;
 
                             this.upsertMovement({
                                 id,
@@ -614,7 +622,7 @@
                                 beneficiary: beneficiary.trim(),
                                 amount,
                                 details: '11 Ideal',
-                                date: tempDate || 'Sin fecha'
+                                date: currentDateForLine || 'Sin fecha'
                             });
                             return;
                         }
