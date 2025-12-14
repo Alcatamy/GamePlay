@@ -59,28 +59,42 @@ def parse_movements(xml_content: str) -> list:
     return movements
 
 def normalize_key(date: str, text: str) -> str:
-    """Clave única para evitar duplicados del solapamiento."""
+    """Clave única LÓGICA (ignorando fecha) para evitar duplicados de captura."""
     text_lower = text.lower()
     
-    # 1. Extraer precio (lo más único)
+    # 1. Transferencias
+    # Regex: Actor ha (comprado|vendido) al jugador Player (de|a) Other por Amount
+    transfer_match = re.search(r'(.+?) ha (comprado|vendido) al jugador (.+?) (?:de|a) (.+?) por ([\d\.]+)[€]?', text, re.IGNORECASE)
+    if transfer_match:
+        actor, action, player, other, amount = transfer_match.groups()
+        amount = amount.replace('.', '')
+        # Normalizar orden para key única (Buyer|Seller)
+        if action.lower() == 'comprado':
+            buyer, seller = actor, other
+        else:
+            buyer, seller = other, actor
+            
+        return f"TRANSFER|{buyer}|{seller}|{player}|{amount}"
+
+    # 2. Blindajes
+    if "blindado" in text_lower:
+        # Puesto que no hay precio, usamos el texto entero (menos fecha)
+        return f"SHIELD|{text_lower}"
+        
+    # 3. Premios Jornada/11 Ideal
+    # "En la jornada X... ha ganado Y"
+    if "en la jornada" in text_lower and "ha ganado" in text_lower:
+        return f"REWARDJ|{text_lower}"
+        
+    if "11 ideal" in text_lower:
+        return f"REWARD11|{text_lower}"
+
+    # Fallback: Usar texto completo (sin fecha) y precio si existe
     price = "0"
     price_match = re.search(r'([\d.]+)€', text)
-    if price_match:
-        price = price_match.group(1).replace('.', '')
-        
-    # 2. Extraer nombre jugador (si aplica)
-    player = "general"
-    player_match = re.search(r'(?:jugador|blindado a)\s+([a-záéíóúñü\s.]+?)(?:\s+(?:de|a|por)|$)', text_lower)
-    if player_match:
-        player = player_match.group(1).strip()
-        
-    # 3. Acción
-    action = "otro"
-    if "vendido" in text_lower: action = "venta"
-    elif "comprado" in text_lower: action = "compra"
-    elif "blindado" in text_lower: action = "blindaje"
+    if price_match: price = price_match.group(1).replace('.', '')
     
-    return f"{date}|{action}|{player}|{price}"
+    return f"RAW|{text_lower}|{price}"
 
 def scroll_overlap():
     """Scroll corto para garantizar solapamiento."""
