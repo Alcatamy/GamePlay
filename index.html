@@ -540,22 +540,30 @@
                 },
 
                 get sortedManagers() {
-                    // Calcular balances dinámicos antes de ordenar
-                    const computedManagers = Object.values(this.managers).map(m => {
-                        let balance = m.initialBudget - m.clauseExpenses;
+                    // ⚡ OPTIMIZADO: Calcular todos los balances en UNA SOLA pasada O(n)
+                    // en lugar de O(n*m) que bloqueaba el navegador
 
-                        // Procesar movimientos historicos
-                        this.movements.forEach(mov => {
-                            if (mov.type === 'transfer') {
-                                if (mov.buyer === m.name) balance -= mov.amount;
-                                if (mov.seller === m.name) balance += mov.amount;
-                            } else if (mov.type === 'reward' && mov.beneficiary === m.name) {
-                                balance += mov.amount;
-                            }
-                        });
-
-                        return { ...m, balance };
+                    // Inicializar balances con presupuesto inicial - cláusulas
+                    const balances = {};
+                    Object.values(this.managers).forEach(m => {
+                        balances[m.name] = m.initialBudget - m.clauseExpenses;
                     });
+
+                    // Una sola pasada por todos los movimientos
+                    this.movements.forEach(mov => {
+                        if (mov.type === 'transfer') {
+                            if (balances[mov.buyer] !== undefined) balances[mov.buyer] -= mov.amount;
+                            if (balances[mov.seller] !== undefined) balances[mov.seller] += mov.amount;
+                        } else if (mov.type === 'reward' && balances[mov.beneficiary] !== undefined) {
+                            balances[mov.beneficiary] += mov.amount;
+                        }
+                    });
+
+                    // Crear array con balances calculados
+                    const computedManagers = Object.values(this.managers).map(m => ({
+                        ...m,
+                        balance: balances[m.name] || 0
+                    }));
 
                     // Ordenar por patrimonio (balance + teamValue)
                     return computedManagers.sort((a, b) => (b.balance + b.teamValue) - (a.balance + a.teamValue));
