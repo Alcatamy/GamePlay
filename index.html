@@ -236,16 +236,28 @@
                                 </svg>
                                 Magic Parser
                             </h2>
-                            <button @click="processInput()"
-                                class="px-4 py-2 bg-neon-green/10 hover:bg-neon-green/20 text-neon-green border border-neon-green/50 rounded-lg text-sm font-bold transition-all hover:scale-105 active:scale-95 flex items-center gap-2">
-                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                Procesar Datos
-                            </button>
+                            <div class="flex gap-2">
+                                <!-- Botón Importar Archivo -->
+                                <label class="px-4 py-2 bg-neon-blue/10 hover:bg-neon-blue/20 text-neon-blue border border-neon-blue/50 rounded-lg text-sm font-bold transition-all hover:scale-105 active:scale-95 flex items-center gap-2 cursor-pointer">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                    </svg>
+                                    Importar .txt
+                                    <input type="file" accept=".txt" @change="importFromFile($event)" class="hidden" />
+                                </label>
+                                <!-- Botón Procesar Texto -->
+                                <button @click="processInput()"
+                                    class="px-4 py-2 bg-neon-green/10 hover:bg-neon-green/20 text-neon-green border border-neon-green/50 rounded-lg text-sm font-bold transition-all hover:scale-105 active:scale-95 flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Procesar Datos
+                                </button>
+                            </div>
                         </div>
                         <p class="text-sm text-gray-400 mb-2">Copia y pega texto directamente desde la app de Fantasy
                             (Movimientos de mercado, valores de equipo, premios).</p>
@@ -646,6 +658,37 @@
 
                 getTotalMovements() {
                     return this.movements.length;
+                },
+
+                // FILE IMPORT
+                importFromFile(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+
+                    if (!file.name.endsWith('.txt')) {
+                        this.addLog('Error: Solo se permiten archivos .txt', 'warning');
+                        return;
+                    }
+
+                    this.addLog(`Leyendo archivo: ${file.name}...`, 'info');
+
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const content = e.target.result;
+                        const lineCount = content.split('\n').length;
+                        this.addLog(`Archivo cargado: ${lineCount} líneas`, 'success');
+                        
+                        // Poner contenido en el textarea y procesarlo
+                        this.rawInput = content;
+                        this.processInput();
+                    };
+                    reader.onerror = () => {
+                        this.addLog('Error al leer el archivo', 'warning');
+                    };
+                    reader.readAsText(file, 'UTF-8');
+
+                    // Reset input para permitir reimportar mismo archivo
+                    event.target.value = '';
                 },
 
                 // DATA PROCESSING
