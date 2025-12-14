@@ -238,7 +238,8 @@
                             </h2>
                             <div class="flex gap-2">
                                 <!-- Botón Importar Archivo -->
-                                <label class="px-4 py-2 bg-neon-blue/10 hover:bg-neon-blue/20 text-neon-blue border border-neon-blue/50 rounded-lg text-sm font-bold transition-all hover:scale-105 active:scale-95 flex items-center gap-2 cursor-pointer">
+                                <label
+                                    class="px-4 py-2 bg-neon-blue/10 hover:bg-neon-blue/20 text-neon-blue border border-neon-blue/50 rounded-lg text-sm font-bold transition-all hover:scale-105 active:scale-95 flex items-center gap-2 cursor-pointer">
                                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                             d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -677,7 +678,7 @@
                         const content = e.target.result;
                         const lineCount = content.split('\n').length;
                         this.addLog(`Archivo cargado: ${lineCount} líneas`, 'success');
-                        
+
                         // Poner contenido en el textarea y procesarlo
                         this.rawInput = content;
                         this.processInput();
@@ -696,8 +697,12 @@
                     const text = this.rawInput;
                     if (!text.trim()) return;
 
+                    const startTime = performance.now();
                     let addedCount = 0;
-                    let updatedCount = 0;
+
+                    // ⚡ OPTIMIZACIÓN: Usar Set para O(1) lookups
+                    const existingIds = new Set(this.movements.map(m => m.id));
+                    const pendingIds = new Set(this.pendingMovements.map(m => m.id));
 
                     const lines = text.split('\n');
                     let tempDate = null; // Para guardar fechas "sueltas" (ej: "04/12/2025") que aparecen entre líneas
@@ -707,16 +712,36 @@
                     // Estrategia: Iterar y buscar patrones.
 
                     // Regex Patterns
-                    const reUltimateFormat = /^\[(\d{2}\/\d{2}\/\d{4})\] (.+)/; // Support for [DD/MM/YYYY] Msg
+                    // Soporta: [DD/MM/YYYY] o [Hace X días] o [Ayer] o cualquier texto entre corchetes
+                    const reSmartFormat = /^\[([^\]]+)\] (.+)/;  // [Cualquier fecha] Mensaje
                     const reDate = /(\d{2}\/\d{2}\/\d{4})/;
                     const reTransfer = /(.+?) ha (comprado|vendido) al jugador (.+?) (?:de|a) (.+?) por ([\d\.]+)[€]?/;
                     const reShield = /(.+?) ha blindado a (.+)/i;
                     const reRewardJornada = /En la jornada (\d+), (.+?) ha ganado ([\d\.]+)[€]?/i;
                     const reReward11 = /(.+?) ha ganado ([\d\.]+)[€]? por tener.+11 ideal/i;
-                    const reTeamValue = /([^\n]+)\s+(\d+)\s+PFSY\s+([\d\.]+)/; // Requires multiline matching or smarter split
+                    const reTeamValue = /([^\n]+)\s+(\d+)\s+PFSY\s+([\d\.]+)/;
 
-                    // Como el formato del usuario es caótico con saltos de línea irregulares, 
-                    // normalizamos un poco juntando líneas si parecen cortadas, o mejor, iteramos buscando bloques.
+                    // Función para normalizar fechas (convierte hora sola a fecha de hoy)
+                    const normalizeDate = (dateStr) => {
+                        if (!dateStr || dateStr === 'NODATE') return 'Sin fecha';
+
+                        // Si es solo hora (ej: "20:37" o "14:30"), añadir fecha de hoy
+                        if (/^\d{1,2}:\d{2}$/.test(dateStr)) {
+                            const today = new Date();
+                            const dd = String(today.getDate()).padStart(2, '0');
+                            const mm = String(today.getMonth() + 1).padStart(2, '0');
+                            const yyyy = today.getFullYear();
+                            return `${dd}/${mm}/${yyyy} ${dateStr}`;
+                        }
+
+                        // Si ya es fecha completa DD/MM/YYYY, devolverla tal cual
+                        if (/^\d{2}\/\d{2}\/\d{4}/.test(dateStr)) {
+                            return dateStr;
+                        }
+
+                        // Para otros formatos (Hace X días, Ayer, etc.) devolver como está
+                        return dateStr;
+                    };
 
                     // Estrategia para Team Values (Formato raro de lista)
                     // Buscaremos patrones de bloque "Nombre \n Num \n PFSY \n Valor" en todo el texto raw
@@ -741,11 +766,11 @@
                         let currentDateForLine = tempDate;
                         let textToParse = line;
 
-                        // Check for Ultimate format [Date] Text
-                        const ultimateMatch = line.match(reUltimateFormat);
-                        if (ultimateMatch) {
-                            currentDateForLine = ultimateMatch[1];
-                            textToParse = ultimateMatch[2];
+                        // Check for [Date] Text format (supports any date format)
+                        const smartMatch = line.match(reSmartFormat);
+                        if (smartMatch) {
+                            currentDateForLine = smartMatch[1].trim();  // "Hace 9 días", "Ayer", "14/12/2025", etc.
+                            textToParse = smartMatch[2];
                         } else if (reDate.test(line)) {
                             tempDate = line.match(reDate)[1];
                             return;
@@ -764,7 +789,9 @@
                             // ID UNIQUE with DATE
                             const id = `transfer_${dateKey}_${buyer}_${seller}_${player}_${amount}`;
 
-                            if (!this.pendingMovements.some(pm => pm.id === id)) {
+                            // ⚡ O(1) lookup en lugar de O(n)
+                            if (!pendingIds.has(id) && !existingIds.has(id)) {
+                                pendingIds.add(id);
                                 this.pendingMovements.push({
                                     id,
                                     type: 'transfer',
@@ -772,7 +799,7 @@
                                     seller,
                                     player,
                                     amount,
-                                    date: dateKey !== 'NODATE' ? dateKey : 'Sin fecha'
+                                    date: normalizeDate(dateKey)
                                 });
                             }
                             return;
@@ -784,7 +811,8 @@
                             const [_, manager, player] = match;
                             const id = `shield_${dateKey}_${manager.trim()}_${player.trim()}`;
 
-                            if (!this.pendingMovements.some(pm => pm.id === id)) {
+                            if (!pendingIds.has(id) && !existingIds.has(id)) {
+                                pendingIds.add(id);
                                 this.pendingMovements.push({
                                     id,
                                     type: 'shield',
@@ -792,7 +820,7 @@
                                     player: player.trim(),
                                     amount: 0,
                                     details: 'Blindaje',
-                                    date: dateKey !== 'NODATE' ? dateKey : 'Sin fecha'
+                                    date: normalizeDate(dateKey)
                                 });
                             }
                             return;
@@ -805,7 +833,8 @@
                             const amount = parseInt(amountStr.replace(/\./g, ''));
                             const id = `reward_jor${jornada}_${beneficiary.trim()}`;
 
-                            if (!this.pendingMovements.some(pm => pm.id === id)) {
+                            if (!pendingIds.has(id) && !existingIds.has(id)) {
+                                pendingIds.add(id);
                                 this.pendingMovements.push({
                                     id,
                                     type: 'reward',
@@ -813,7 +842,7 @@
                                     beneficiary: beneficiary.trim(),
                                     amount,
                                     details: `Jornada ${jornada}`,
-                                    date: dateKey !== 'NODATE' ? dateKey : 'Sin fecha'
+                                    date: normalizeDate(dateKey)
                                 });
                             }
                             return;
@@ -824,10 +853,10 @@
                         if (match) {
                             const [_, beneficiary, amountStr] = match;
                             const amount = parseInt(amountStr.replace(/\./g, ''));
-                            // ID with date to avoid collisions
                             const id = `reward_11_${beneficiary.trim()}_${dateKey}_${amount}`;
 
-                            if (!this.pendingMovements.some(pm => pm.id === id)) {
+                            if (!pendingIds.has(id) && !existingIds.has(id)) {
+                                pendingIds.add(id);
                                 this.pendingMovements.push({
                                     id,
                                     type: 'reward',
@@ -835,54 +864,54 @@
                                     beneficiary: beneficiary.trim(),
                                     amount,
                                     details: '11 Ideal',
-                                    date: dateKey !== 'NODATE' ? dateKey : 'Sin fecha'
+                                    date: normalizeDate(dateKey)
                                 });
                             }
                             return;
                         }
                     });
 
+                    const elapsed = (performance.now() - startTime).toFixed(0);
+
                     if (this.pendingMovements.length > 0) {
-                        this.addLog(`${this.pendingMovements.length} movimientos analizados. Revisa la tabla.`, 'info');
-                        // No limpiamos rawInput para permitir correcciones si cancelan
+                        this.addLog(`⚡ ${this.pendingMovements.length} movimientos en ${elapsed}ms. Revisa la tabla.`, 'info');
                     } else if (addedCount > 0) {
                         this.addLog(`Valores de equipo actualizados.`, 'success');
                         this.rawInput = '';
                     } else {
-                        this.addLog(`No se detectaron movimientos nuevos.`, 'warning');
+                        this.addLog(`No se detectaron movimientos nuevos (${elapsed}ms).`, 'warning');
                     }
                 },
 
                 confirmImport() {
-                    let count = 0;
+                    const startTime = performance.now();
+
+                    // ⚡ OPTIMIZACIÓN: Batch insert con Map para O(1) lookups
+                    const existingMap = new Map(this.movements.map(m => [m.id, m]));
+                    let newCount = 0;
+                    let updatedCount = 0;
+
                     this.pendingMovements.forEach(mov => {
-                        this.upsertMovement(mov);
-                        count++;
+                        const existing = existingMap.get(mov.id);
+                        if (!existing) {
+                            this.movements.push(mov);
+                            newCount++;
+                        } else if (mov.date.includes('/') && !existing.date.includes('/')) {
+                            existing.date = mov.date;
+                            updatedCount++;
+                        }
                     });
-                    this.addLog(`Importación confirmada: ${count} movimientos guardados.`, 'success');
+
+                    const elapsed = (performance.now() - startTime).toFixed(0);
+                    this.addLog(`⚡ Importación: ${newCount} nuevos, ${updatedCount} actualizados (${elapsed}ms)`, 'success');
                     this.pendingMovements = [];
                     this.rawInput = '';
-                    this.saveData(); // Force save
+                    this.saveData();
                 },
 
                 cancelImport() {
                     this.pendingMovements = [];
                     this.addLog('Importación cancelada.', 'info');
-                },
-
-                upsertMovement(mov) {
-                    const idx = this.movements.findIndex(m => m.id === mov.id);
-                    if (idx === -1) {
-                        this.movements.push(mov);
-                        this.addLog(`Nuevo mov: ${mov.type} - ${mov.amount}€`, 'success');
-                    } else {
-                        // Update fecha si la nueva es mejor (tiene /) y la vieja no
-                        const oldMov = this.movements[idx];
-                        if (mov.date.includes('/') && !oldMov.date.includes('/')) {
-                            this.movements[idx].date = mov.date;
-                            this.addLog(`Fecha actualizada para ${mov.id}`, 'info');
-                        }
-                    }
                 },
 
                 addClauseExpense() {
