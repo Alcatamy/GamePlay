@@ -637,6 +637,17 @@
                     ];
                 },
 
+                getTopTransfers() {
+                    return this.movements
+                        .filter(m => m.type === 'transfer')
+                        .sort((a, b) => b.amount - a.amount)
+                        .slice(0, 50);
+                },
+
+                getTotalMovements() {
+                    return this.movements.length;
+                },
+
                 // DATA PROCESSING
                 processInput() {
                     const text = this.rawInput;
@@ -709,16 +720,18 @@
                             // Crear ID único
                             const id = `transfer_${buyer}_${seller}_${player}_${amount}`;
 
-                            // Stage
-                            this.pendingMovements.push({
-                                id,
-                                type: 'transfer',
-                                buyer,
-                                seller,
-                                player,
-                                amount,
-                                date: currentDateForLine || 'Sin fecha'
-                            });
+                            // Stage (Check duplicates first)
+                            if (!this.pendingMovements.some(pm => pm.id === id)) {
+                                this.pendingMovements.push({
+                                    id,
+                                    type: 'transfer',
+                                    buyer,
+                                    seller,
+                                    player,
+                                    amount,
+                                    date: currentDateForLine || 'Sin fecha'
+                                });
+                            }
                             return;
                         }
 
@@ -729,15 +742,17 @@
                             const amount = parseInt(amountStr.replace(/\./g, ''));
                             const id = `reward_jor${jornada}_${beneficiary.trim()}`;
 
-                            this.pendingMovements.push({
-                                id,
-                                type: 'reward',
-                                subtype: 'jornada',
-                                beneficiary: beneficiary.trim(),
-                                amount,
-                                details: `Jornada ${jornada}`,
-                                date: currentDateForLine || 'Sin fecha'
-                            });
+                            if (!this.pendingMovements.some(pm => pm.id === id)) {
+                                this.pendingMovements.push({
+                                    id,
+                                    type: 'reward',
+                                    subtype: 'jornada',
+                                    beneficiary: beneficiary.trim(),
+                                    amount,
+                                    details: `Jornada ${jornada}`,
+                                    date: currentDateForLine || 'Sin fecha'
+                                });
+                            }
                             return;
                         }
 
@@ -750,15 +765,17 @@
                             // Añadimos random suffix o usamos tempDate si existe
                             const id = `reward_11_${beneficiary.trim()}_${currentDateForLine || amount}`;
 
-                            this.pendingMovements.push({
-                                id,
-                                type: 'reward',
-                                subtype: '11ideal',
-                                beneficiary: beneficiary.trim(),
-                                amount,
-                                details: '11 Ideal',
-                                date: currentDateForLine || 'Sin fecha'
-                            });
+                            if (!this.pendingMovements.some(pm => pm.id === id)) {
+                                this.pendingMovements.push({
+                                    id,
+                                    type: 'reward',
+                                    subtype: '11ideal',
+                                    beneficiary: beneficiary.trim(),
+                                    amount,
+                                    details: '11 Ideal',
+                                    date: currentDateForLine || 'Sin fecha'
+                                });
+                            }
                             return;
                         }
                     });
