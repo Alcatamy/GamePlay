@@ -1,0 +1,47 @@
+Apps web
+Fantasy
+App web
+Apps pendientes de eliminación
+1 app pendiente de eliminación
+Sobrenombre de la app
+Fantasy
+ID de la app
+1:865841758007:web:ac53121bc37d00574864b2
+Configuración del SDK
+
+npm
+
+CDN
+
+Config
+Si ya usas npm y un agrupador de módulos como Webpack o Rollup, puedes ejecutar el siguiente comando para instalar la versión más reciente del SDK (más información):
+
+npm install firebase
+Luego, inicializa Firebase y comienza a usar los SDK de los productos que quieres utilizar.
+
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyBzlYu7dTaEvIIt7VehdhVwqOLS2BLnqDQ",
+  authDomain: "mercato-fbdcc.firebaseapp.com",
+  databaseURL: "https://mercato-fbdcc-default-rtdb.firebaseio.com",
+  projectId: "mercato-fbdcc",
+  storageBucket: "mercato-fbdcc.firebasestorage.app",
+  messagingSenderId: "865841758007",
+  appId: "1:865841758007:web:ac53121bc37d00574864b2",
+  measurementId: "G-0WQNPFTYNF"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+Nota: Esta opción utiliza el SDK de JavaScript modular, que proporciona un tamaño reducido del SDK.
+
+Obtén más información sobre Firebase para la Web: primeros pasos, referencia de la API del SDK web y muestras
+

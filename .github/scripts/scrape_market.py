@@ -1,141 +1,139 @@
-import os
-import re
 import json
+import re
+import os
+import datetime
 from playwright.sync_api import sync_playwright
 
-TARGET_URL = "https://www.analiticafantasy.com/fantasy-la-liga/mercado"
-OUTPUT_FILE = "market_data.js"
+# --- CONFIG ---
+OUTPUT_FILE = r'C:\Users\adrian.alcaide\Documents\Fantasy\market_data.js'
+# If running in GitHub Actions, path might be different, but for local testing:
+# OUTPUT_FILE = 'market_data.js' 
 
-def run():
-    # 1. Load Previous Data
-    old_data = {}
-    if os.path.exists(OUTPUT_FILE):
-        try:
-            with open(OUTPUT_FILE, "r", encoding="utf-8") as f:
-                content = f.read()
-                # Extract JSON from "const MARKET_DATA = { ... };"
-                match = re.search(r'const MARKET_DATA = ({.*?});', content, re.DOTALL)
-                if match:
-                    old_data = json.loads(match.group(1))
-                    print(f"Datos previos cargados: {len(old_data)} registros.")
-        except Exception as e:
-            print(f"No se pudieron leer datos previos: {e}")
-
+def scrape_market():
+    print(f"[{datetime.datetime.now()}] Starting Comuniate (Relevo) Scrape...")
+    
+    market_data = {}   # Simple Map: Name -> Value
+    market_info = {}   # Rich Data: Name -> { pos, points, team, etc }
+    market_trends = {} # Trends: Name -> { trend, trendPct, etc }
+    
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
         
-        print(f"Navegando a {TARGET_URL}...")
-        page.goto(TARGET_URL)
-        
-        # Accept Cookies
         try:
-            page.get_by_text("Aceptar", exact=False).first.click(timeout=5000)
-        except:
-            pass
-
-        # Scroll
-        print("Cargando lista completa...")
-        prev_height = 0
-        for _ in range(25):
-            page.mouse.wheel(0, 5000)
-            page.wait_for_timeout(1000)
-            curr_height = page.evaluate("document.body.scrollHeight")
-            if curr_height == prev_height:
-                break
-            prev_height = curr_height
-        
-        # Extract
-        content = page.content()
-        new_data = {}
-        count = 0
-        
-        # Regex for Position/Name/Value
-        # Look for Position DIV (DL/MC/DF/PT) then Name P then Value P
-        # Format: <div ...>DL</div> ... <p...Name</p> ... <p...Value €</p>
-        
-        matches = re.findall(r'position-color-[a-z]+[^>]*>\s*([A-Z]+)<\/div>.*?MuiTypography-body2[^>]*>\s*([^<]+)<\/p>.*?MuiTypography-body1[^>]*>\s*([\d\.]+) €<\/p>', content, re.DOTALL)
-        
-        for pos, name, price_str in matches:
+            print("Navigating to https://www.comuniate.com/mercado/fantasy ...")
+            page.goto('https://www.comuniate.com/mercado/fantasy', timeout=60000)
+            
+            # 1. Switch to Relevo / LaLiga Fantasy tab
+            print("Switching to Relevo/Fantasy View...")
             try:
-                clean_name = name.strip()
-                clean_price = int(price_str.replace(".", ""))
-                clean_pos = pos.strip()
+                # Based on previous inspection, this selector works
+                page.click('li[data-fantasy="relevo"]')
+                page.wait_for_timeout(3000) # Ensure tab switches and content loads
+            except Exception as e:
+                print(f"Warning: Could not click 'Relevo' tab. Might already be active or selector changed. Error: {e}")
+
+            # 2. Scroll to load all data (Infinite Scroll handling)
+            print("Scrolling to load all players...")
+            for i in range(15): # Scroll aggressive to ensure full list
+                page.mouse.wheel(0, 10000)
+                page.wait_for_timeout(800)
                 
-                if len(clean_name) > 50 or clean_price < 100: continue
+            # 3. Extract Data
+            cards = page.query_selector_all('.ficha_jugador')
+            print(f"Found {len(cards)} player cards.")
+            
+            for card in cards:
+                text = card.inner_text()
                 
-                # Store object instead of simple int
-                new_data[clean_name] = { "value": clean_price, "position": clean_pos }
-                count += 1
-            except:
-                pass
+                # --- NAME extraction ---
+                name = "Unknown"
+                name_el = card.query_selector('.titulo_ficha_jugador')
+                if name_el:
+                    name = name_el.inner_text().strip()
+                else:
+                    lines = text.split('\n')
+                    for line in lines:
+                        if len(line) > 3 and not any(x in line for x in ['€', 'PT', 'DF', 'MD', 'MC', 'DL']) and not line.isdigit():
+                            name = line.strip()
+                            break
+                            
+                # --- POSITION extraction ---
+                pos = "UNK"
+                badges = card.query_selector_all('.label-posicion')
+                for b in badges:
+                    b_txt = b.inner_text().strip().upper()
+                    if b_txt in ['PT', 'DF', 'MD', 'MC', 'DL', 'CEN']:
+                        pos = b_txt
+                        break
+                
+                # --- POINTS extraction ---
+                points = 0
+                for b in badges:
+                    b_txt = b.inner_text().strip()
+                    # Points are digits, sometimes negative
+                    if b_txt.lstrip('-').isdigit():
+                        if b_txt not in ['PT', 'DF', 'MD', 'MC', 'DL']:
+                            points = int(b_txt)
+                            break
+                            
+                # --- PRICE extraction ---
+                price = 0
+                money_match = re.search(r'([\d\.]+)€', text)
+                if money_match:
+                    price = int(money_match.group(1).replace('.', ''))
+                
+                # --- TREND extraction ---
+                trend = 0
+                trend_el = card.query_selector('.success') or card.query_selector('.danger')
+                if trend_el:
+                    t_txt = trend_el.inner_text().strip()
+                    try:
+                        trend = int(t_txt.replace('.', '').replace('€', '').replace('+', ''))
+                    except:
+                        pass
+                
+                # --- STORE DATA ---
+                if name != "Unknown":
+                    # 1. Simple Map (for compatibility)
+                    market_data[name] = price
+                    
+                    # 2. Info Map (New rich data)
+                    market_info[name] = {
+                        'position': pos,
+                        'points': points,
+                        'value': price
+                    }
+                    
+                    # 3. Trends Map (Calculated or scraped)
+                    pct = 0
+                    if (price - trend) > 0:
+                        pct = (trend / (price - trend)) * 100
+                    
+                    market_trends[name] = {
+                        'trend': trend,
+                        'trendPct': round(pct, 1)
+                    }
 
-        print(f"Extraídos {count} jugadores con posición.")
-        
-        if count == 0:
-            # Fallback to old regex if position fails (robustness)
-             print("Fallo en regex con posición, intentando solo nombre/valor...")
-             matches = re.findall(r'MuiTypography-body2[^>]*>\s*([^<]+)<\/p>.*?MuiTypography-body1[^>]*>\s*([\d\.]+) €<\/p>', content, re.DOTALL)
-             for name, price_str in matches:
-                 try:
-                    clean_name = name.strip()
-                    clean_price = int(price_str.replace(".", ""))
-                    new_data[clean_name] = { "value": clean_price, "position": "?" }
-                    count += 1
-                 except: pass
+        except Exception as e:
+            print(f"Scrape Error: {e}")
+        finally:
+            browser.close()
 
-        if count == 0: raise Exception("No se extrajeron datos.")
+    # --- SAVE TO JS FILE ---
+    print(f"Saving data for {len(market_data)} players...")
+    
+    js_content = f"""// Auto-generated by scrape_market.py
+const MARKET_DATA = {json.dumps(market_data, indent=2)};
+const MARKET_INFO = {json.dumps(market_info, indent=2)};
+const MARKET_TRENDS = {json.dumps(market_trends, indent=2)};
+"""
+    
+    # Write with UTF-8 encoding
+    with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
+        f.write(js_content)
+        
+    print("Done.")
 
-        # Calculate Trends
-        trends = {}
-        # Also simplified simple_data for legacy compatibility if needed, 
-        # But we will update index.html to handle objects.
-        
-        # We need a format for index.html.
-        # Current index.html expects: marketData[name] = 123 (Number).
-        # We should probably keep MARKET_DATA as simple map for compatibility, 
-        # and add MARKET_INFO = { name: { pos: 'DL', val: 123 } }?
-        # OR Update index.html to handle object.
-        # User wants "Joy of Crown" -> needs Index Update.
-        # So I will output enriched format.
-        
-        # However, to avoid Breaking index.html immediately, I can export BOTH.
-        # MARKET_DATA_SIMPLE = { name: val }
-        # MARKET_DATA_FULL = { name: { val, pos } }
-        
-        simple_data = {}
-        full_data = {}
-        
-        for name, data in new_data.items():
-            val = data["value"]
-            pos = data["position"]
-            simple_data[name] = val
-            full_data[name] = { "v": val, "p": pos }
-            
-            # Trend
-            prev = old_data.get(name)
-            # Old data might be simple int or object depending on version
-            prev_val = 0
-            if isinstance(prev, int): prev_val = prev
-            elif isinstance(prev, dict): prev_val = prev.get("value", 0) or prev.get("v", 0)
-            
-            if prev_val > 0:
-                diff = val - prev_val
-                pct = (diff / prev_val) * 100
-                trends[name] = { "diff": diff, "pct": round(pct, 2) }
-            else:
-                 trends[name] = { "diff": 0, "pct": 0 }
-
-        # Save
-        js_content = f"const MARKET_DATA = {json.dumps(simple_data, indent=4, ensure_ascii=False)};\n"
-        js_content += f"const MARKET_INFO = {json.dumps(full_data, indent=4, ensure_ascii=False)};\n"
-        js_content += f"const MARKET_TRENDS = {json.dumps(trends, indent=4, ensure_ascii=False)};\n"
-        
-        with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-            f.write(js_content)
-        
-        print(f"Datos guardados: DATA (Simple), INFO (Pos), TRENDS.")
-        browser.close()
-
-if __name__ == "__main__":
-    run()
+if __name__ == '__main__':
+    scrape_market()

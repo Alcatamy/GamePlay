@@ -32,43 +32,79 @@
     </script>
     <!-- Market Data -->
     <script src="market_data.js"></script>
+    <script src="movements_data.js"></script> <!-- Historical Data -->
 
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #0f172a;
-            color: #e2e8f0;
+        :root {
+            /* Premium Dark Palette */
+            --bg-body: #0f172a;
+            --bg-card: #1e293b;
+            --bg-card-glass: rgba(30, 41, 59, 0.7);
+
+            --primary: #10b981;
+            /* Emerald 500 */
+            --primary-glow: rgba(16, 185, 129, 0.4);
+            --secondary: #6366f1;
+            /* Indigo 500 */
+
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+
+            --border: rgba(255, 255, 255, 0.08);
+            --glass: blur(12px) saturate(160%);
+
+            --nav-height: 70px;
         }
 
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            margin: 0;
+            padding-bottom: calc(var(--nav-height) + 20px);
+            /* Space for bottom nav */
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Premium Scrollbar */
         ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+            width: 6px;
         }
 
         ::-webkit-scrollbar-track {
-            background: #1e293b;
+            background: transparent;
         }
 
         ::-webkit-scrollbar-thumb {
-            background: #475569;
-            border-radius: 4px;
+            background: #334155;
+            border-radius: 10px;
         }
 
-        ::-webkit-scrollbar-thumb:hover {
-            background: #64748b;
+        /* Typography */
+        h1,
+        h2,
+        h3 {
+            letter-spacing: -0.025em;
         }
 
+        /* Mobile Layout */
+        .app-container {
+            max-width: 600px;
+            /* Mobile focused max width */
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Glass Cards */
         .glass-card {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(10px);
+            background: rgba(30, 41, 59, 0.6);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 1rem;
-        }
-
-        .sidebar-link {
-            transition: all 0.2s;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
         }
 
         .sidebar-link:hover,
@@ -93,419 +129,398 @@
     </script>
 </head>
 
-<body class="h-screen overflow-hidden flex text-sm">
+<body x-data="gamePlayApp()" x-init="initApp()">
 
-    <div x-data="gamePlayApp()" x-init="initApp()" class="flex w-full h-full">
+    <div class="app-container">
 
-        <!-- SIDEBAR -->
-        <aside
-            class="w-64 flex-shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col transition-all duration-300"
-            :class="{'w-20': collapsed}">
-            <div class="h-16 flex items-center justify-center border-b border-slate-800">
-                <i class="fas fa-bolt text-yellow-400 text-2xl mr-2"></i>
-                <span class="font-bold text-xl tracking-tight" x-show="!collapsed">Fantasy<span
-                        class="text-blue-500">Pro</span></span>
+        <!-- HEADER MOBILE -->
+        <header class="flex justify-between items-center mb-6 pt-2">
+            <div>
+                <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-cyan-500"
+                    style="font-family: 'Outfit', sans-serif;">
+                    Fantasy<span class="text-white">Pro</span>
+                </h1>
+                <p class="text-xs text-slate-400 tracking-wide">Manager Intelligence</p>
             </div>
-            <nav class="flex-1 overflow-y-auto py-4 space-y-1">
-                <template x-for="item in navItems" :key="item.id">
-                    <a @click="currentView = item.id"
-                        class="sidebar-link flex items-center px-6 py-3 cursor-pointer text-slate-400 hover:text-white"
-                        :class="{'active': currentView === item.id}">
-                        <i :class="item.icon + ' w-6 text-center'"></i>
-                        <span class="ml-3 font-medium" x-show="!collapsed" x-text="item.label"></span>
-                    </a>
-                </template>
-            </nav>
-            <div class="p-4 border-t border-slate-800">
-                <button @click="collapsed = !collapsed"
-                    class="w-full flex items-center justify-center p-2 rounded-lg hover:bg-slate-800 text-slate-400">
-                    <i :class="collapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-left'"></i>
-                </button>
-            </div>
-        </aside>
-
-        <!-- MAIN CONTENT -->
-        <main class="flex-1 flex flex-col min-w-0 bg-slate-950 overflow-hidden relative">
-
-            <header
-                class="h-16 flex items-center justify-between px-8 bg-slate-900/50 backdrop-blur border-b border-slate-800 z-10">
-                <h1 class="text-xl font-bold text-white capitalize"
-                    x-text="navItems.find(i=>i.id===currentView)?.label"></h1>
-                <div class="flex items-center gap-4">
-                    <span class="text-xs text-slate-500 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
-                        <i class="fas fa-database mr-1"></i> <span x-text="movements.length + ' movs'"></span>
-                    </span>
-                    <button
-                        class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2"
-                        @click="reconstructTradingHistory(); addLog('Datos recalculados', 'info')">
-                        <i class="fas fa-sync-alt"></i> Recalcular
-                    </button>
+            <div class="relative">
+                <div
+                    class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 shadow-lg shadow-emerald-500/20">
+                    <i class="fas fa-robot text-emerald-400 text-lg"></i>
                 </div>
-            </header>
+                <div class="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-slate-900">
+                </div>
+            </div>
+        </header>
 
-            <div class="flex-1 overflow-y-auto p-8 relative">
+        <!-- INFO BAR -->
+        <div
+            class="flex items-center justify-between bg-slate-800/40 p-3 rounded-2xl border border-white/5 mb-6 backdrop-blur-sm">
+            <div class="flex items-center gap-2 text-xs text-slate-400">
+                <div class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></div>
+                <span x-text="movements.length + ' movimientos'"></span>
+            </div>
+            <button @click="reconstructTradingHistory(); addLog('Recalculando...', 'info')"
+                class="text-xs bg-blue-500/10 text-blue-400 px-3 py-1.5 rounded-lg border border-blue-500/20 font-semibold hover:bg-blue-500 hover:text-white transition-all">
+                <i class="fas fa-sync-alt mr-1"></i> Sync
+            </button>
+        </div>
 
-                <!-- DASHBOARD -->
-                <div x-show="currentView === 'dashboard'" class="space-y-6" x-transition.opacity>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div class="glass-card p-6 flex flex-col relative overflow-hidden group">
-                            <div
-                                class="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                <i class="fas fa-money-bill-wave text-6xl text-green-500"></i>
-                            </div>
-                            <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Volumen
-                                Negociado</span>
-                            <span class="text-2xl font-bold text-white mt-1"
-                                x-text="formatMoney(calculateTotalVolume())"></span>
+        <main class="space-y-6 pb-24">
+
+            <!-- DASHBOARD -->
+            <div x-show="currentView === 'dashboard'" class="space-y-6" x-transition.opacity>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="glass-card p-6 flex flex-col relative overflow-hidden group">
+                        <div class="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-money-bill-wave text-6xl text-green-500"></i>
                         </div>
-                        <div class="glass-card p-6 flex flex-col relative overflow-hidden group">
-                            <div
-                                class="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                <i class="fas fa-users text-6xl text-blue-500"></i>
-                            </div>
-                            <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Managers</span>
-                            <span class="text-2xl font-bold text-white mt-1"
-                                x-text="Object.keys(managers).length"></span>
-                        </div>
-                        <div class="glass-card p-6 flex flex-col relative overflow-hidden group">
-                            <div
-                                class="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                <i class="fas fa-chart-line text-6xl text-purple-500"></i>
-                            </div>
-                            <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Mercado
-                                (Jugadores)</span>
-                            <span class="text-2xl font-bold text-white mt-1"
-                                x-text="formatMoney(calculateMarketTotal())"></span>
-                            <span class="text-xs text-green-400 mt-1"
-                                x-text="Object.keys(marketData).length + ' jugadores'"></span>
-                        </div>
-                        <div class="glass-card p-6 flex flex-col relative overflow-hidden group">
-                            <div
-                                class="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                <i class="fas fa-trophy text-6xl text-yellow-500"></i>
-                            </div>
-                            <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Líder
-                                (Patrimonio)</span>
-                            <span class="text-xl font-bold text-white mt-1 truncate"
-                                x-text="marketValuation.sort((a,b)=>(b.marketValue+b.balance)-(a.marketValue+a.balance))[0]?.name || '-'"></span>
-                        </div>
+                        <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Volumen
+                            Negociado</span>
+                        <span class="text-2xl font-bold text-white mt-1"
+                            x-text="formatMoney(calculateTotalVolume())"></span>
                     </div>
-
-                    <div class="glass-card p-6">
-                        <h3 class="text-lg font-bold text-white mb-4"><i
-                                class="fas fa-trophy text-yellow-400 mr-2"></i>Clasificación Rápida</h3>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="text-slate-400 border-b border-slate-700 text-xs uppercase">
-                                        <th class="p-3">Manager</th>
-                                        <th class="p-3 text-right">Caja</th>
-                                        <th class="p-3 text-right">Plantilla</th>
-                                        <th class="p-3 text-right font-bold text-white">Patrimonio Total</th>
-                                        <th class="p-3 text-right text-blue-400">Puja Máx</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <template
-                                        x-for="mgr in marketValuation.sort((a,b) => (b.balance+b.marketValue)-(a.balance+a.marketValue))"
-                                        :key="mgr.name">
-                                        <tr
-                                            class="border-b border-slate-700/50 hover:bg-slate-800/50 transition-colors">
-                                            <td class="p-3 font-medium text-white" x-text="mgr.name"></td>
-                                            <td class="p-3 text-right text-slate-400" x-text="formatMoney(mgr.balance)">
-                                            </td>
-                                            <td class="p-3 text-right text-green-400"
-                                                x-text="formatMoney(mgr.marketValue)"></td>
-                                            <td class="p-3 text-right font-bold text-white"
-                                                x-text="formatMoney(mgr.balance + mgr.marketValue)"></td>
-                                            <td class="p-3 text-right font-mono text-blue-400"
-                                                x-text="formatMoney(mgr.balance + (mgr.marketValue * 0.2))"></td>
-                                        </tr>
-                                    </template>
-                                </tbody>
-                            </table>
+                    <div class="glass-card p-6 flex flex-col relative overflow-hidden group">
+                        <div class="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-users text-6xl text-blue-500"></i>
                         </div>
+                        <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Managers</span>
+                        <span class="text-2xl font-bold text-white mt-1" x-text="Object.keys(managers).length"></span>
+                    </div>
+                    <div class="glass-card p-6 flex flex-col relative overflow-hidden group">
+                        <div class="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-chart-line text-6xl text-purple-500"></i>
+                        </div>
+                        <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Mercado
+                            (Jugadores)</span>
+                        <span class="text-2xl font-bold text-white mt-1"
+                            x-text="formatMoney(calculateMarketTotal())"></span>
+                        <span class="text-xs text-green-400 mt-1"
+                            x-text="Object.keys(marketData).length + ' jugadores'"></span>
+                    </div>
+                    <div class="glass-card p-6 flex flex-col relative overflow-hidden group">
+                        <div class="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                            <i class="fas fa-trophy text-6xl text-yellow-500"></i>
+                        </div>
+                        <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Líder
+                            (Patrimonio)</span>
+                        <span class="text-xl font-bold text-white mt-1 truncate"
+                            x-text="marketValuation.sort((a,b)=>(b.marketValue+b.balance)-(a.marketValue+a.balance))[0]?.name || '-'"></span>
                     </div>
                 </div>
 
-                <!-- CLASIFICACION DETALLADA -->
-                <div x-show="currentView === 'clasificacion'" class="space-y-6" x-transition.opacity>
-                    <div class="glass-card overflow-hidden">
-                        <div class="p-4 bg-slate-900 border-b border-slate-800">
-                            <h3 class="text-white font-bold"><i class="fas fa-chart-pie mr-2"></i>Análisis Financiero &
-                                Inflación</h3>
-                        </div>
-                        <table class="w-full text-left">
-                            <thead class="bg-slate-900 border-b border-slate-700">
-                                <tr class="text-slate-400 text-xs uppercase">
-                                    <th class="p-4">Manager</th>
-                                    <th class="p-4 text-right">Inversión (Coste)</th>
-                                    <th class="p-4 text-right">Valor Actual</th>
-                                    <th class="p-4 text-right text-green-400">Inflación (Latente)</th>
-                                    <th class="p-4 text-right text-yellow-400">Profit Realizado</th>
-                                    <th class="p-4 text-right text-blue-400">ROI Total</th>
+                <div class="glass-card p-6">
+                    <h3 class="text-lg font-bold text-white mb-4"><i
+                            class="fas fa-trophy text-yellow-400 mr-2"></i>Clasificación Rápida</h3>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="text-slate-400 border-b border-slate-700 text-xs uppercase">
+                                    <th class="p-3">Manager</th>
+                                    <th class="p-3 text-right">Caja</th>
+                                    <th class="p-3 text-right">Plantilla</th>
+                                    <th class="p-3 text-right font-bold text-white">Patrimonio Total</th>
+                                    <th class="p-3 text-right text-blue-400">Puja Máx</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-800">
+                            <tbody>
                                 <template
-                                    x-for="mgr in marketValuation.sort((a,b) => b.unrealizedProfit - a.unrealizedProfit)"
+                                    x-for="mgr in marketValuation.sort((a,b) => (b.balance+b.marketValue)-(a.balance+a.marketValue))"
                                     :key="mgr.name">
-                                    <tr class="hover:bg-slate-800/50 transition-colors">
-                                        <td class="p-4 font-semibold text-white" x-text="mgr.name"></td>
-                                        <td class="p-4 text-right text-slate-400" x-text="formatMoney(mgr.invested)">
+                                    <tr class="border-b border-slate-700/50 hover:bg-slate-800/50 transition-colors">
+                                        <td class="p-3 font-medium text-white" x-text="mgr.name"></td>
+                                        <td class="p-3 text-right text-slate-400" x-text="formatMoney(mgr.balance)">
                                         </td>
-                                        <td class="p-4 text-right text-white" x-text="formatMoney(mgr.marketValue)">
+                                        <td class="p-3 text-right text-green-400" x-text="formatMoney(mgr.marketValue)">
                                         </td>
-                                        <td class="p-4 text-right font-bold"
-                                            :class="mgr.unrealizedProfit > 0 ? 'text-green-500' : 'text-red-500'"
-                                            x-text="formatMoney(mgr.unrealizedProfit)"></td>
-                                        <td class="p-4 text-right font-mono text-yellow-500"
-                                            x-text="formatMoney(tradingHistory.managerStats[mgr.name]?.profit || 0)">
-                                        </td>
-                                        <td class="p-4 text-right font-mono text-blue-400"
-                                            x-text="mgr.invested > 0 ? ((mgr.unrealizedProfit / mgr.invested)*100).toFixed(1) + '%' : '0%'">
-                                        </td>
+                                        <td class="p-3 text-right font-bold text-white"
+                                            x-text="formatMoney(mgr.balance + mgr.marketValue)"></td>
+                                        <td class="p-3 text-right font-mono text-blue-400"
+                                            x-text="formatMoney(mgr.balance + (mgr.marketValue * 0.2))"></td>
                                     </tr>
                                 </template>
                             </tbody>
                         </table>
                     </div>
                 </div>
+            </div>
 
-                <!-- JUGADORES (ALL PLAYERS) -->
-                <div x-show="currentView === 'jugadores'" class="space-y-6" x-transition.opacity>
-                    <div class="flex flex-wrap gap-4 mb-4">
-                        <input type="text" x-model="playerFilters.search" placeholder="🔍 Buscar jugador..."
-                            class="bg-slate-800 border-slate-700 rounded-lg p-3 text-white flex-grow focus:ring-2 focus:ring-blue-500 outline-none">
-                        <select x-model="playerFilters.owner"
-                            class="bg-slate-800 border-slate-700 rounded-lg p-3 text-white outline-none">
-                            <option value="all">Todos los Estados</option>
-                            <option value="free">Solo Libres</option>
-                            <option value="owned">Con Dueño</option>
-                        </select>
-                        <select x-model="playerFilters.sort"
-                            class="bg-slate-800 border-slate-700 rounded-lg p-3 text-white outline-none">
-                            <option value="value_desc">Mayor Valor</option>
-                            <option value="value_asc">Menor Valor</option>
-                            <option value="cost_desc">Mayor Coste</option>
-                        </select>
+            <!-- CLASIFICACION DETALLADA -->
+            <div x-show="currentView === 'clasificacion'" class="space-y-6" x-transition.opacity>
+                <div class="glass-card overflow-hidden">
+                    <div class="p-4 bg-slate-900 border-b border-slate-800">
+                        <h3 class="text-white font-bold"><i class="fas fa-chart-pie mr-2"></i>Análisis Financiero &
+                            Inflación</h3>
                     </div>
-
-                    <div class="glass-card overflow-hidden">
-                        <table class="w-full text-left">
-                            <thead class="bg-slate-900 border-b border-slate-700">
-                                <tr class="text-slate-400 text-xs uppercase">
-                                    <th class="p-4">Jugador</th>
-                                    <th class="p-4">Estado / Dueño</th>
-                                    <th class="p-4 text-right">Valor Mercado</th>
-                                    <th class="p-4 text-right">24h %</th>
-                                    <th class="p-4 text-right">Coste Adquisición</th>
-                                    <th class="p-4 text-right">Diff</th>
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-900 border-b border-slate-700">
+                            <tr class="text-slate-400 text-xs uppercase">
+                                <th class="p-4">Manager</th>
+                                <th class="p-4 text-right">Inversión (Coste)</th>
+                                <th class="p-4 text-right">Valor Actual</th>
+                                <th class="p-4 text-right text-green-400">Inflación (Latente)</th>
+                                <th class="p-4 text-right text-yellow-400">Profit Realizado</th>
+                                <th class="p-4 text-right text-blue-400">ROI Total</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800">
+                            <template
+                                x-for="mgr in marketValuation.sort((a,b) => b.unrealizedProfit - a.unrealizedProfit)"
+                                :key="mgr.name">
+                                <tr class="hover:bg-slate-800/50 transition-colors">
+                                    <td class="p-4 font-semibold text-white" x-text="mgr.name"></td>
+                                    <td class="p-4 text-right text-slate-400" x-text="formatMoney(mgr.invested)">
+                                    </td>
+                                    <td class="p-4 text-right text-white" x-text="formatMoney(mgr.marketValue)">
+                                    </td>
+                                    <td class="p-4 text-right font-bold"
+                                        :class="mgr.unrealizedProfit > 0 ? 'text-green-500' : 'text-red-500'"
+                                        x-text="formatMoney(mgr.unrealizedProfit)"></td>
+                                    <td class="p-4 text-right font-mono text-yellow-500"
+                                        x-text="formatMoney(tradingHistory.managerStats[mgr.name]?.profit || 0)">
+                                    </td>
+                                    <td class="p-4 text-right font-mono text-blue-400"
+                                        x-text="mgr.invested > 0 ? ((mgr.unrealizedProfit / mgr.invested)*100).toFixed(1) + '%' : '0%'">
+                                    </td>
                                 </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-800">
-                                <template x-for="p in filteredPlayers.slice(0, 5000)" :key="p.name">
-                                    <tr class="hover:bg-slate-800/50 transition-colors">
-                                        <td class="p-4 font-medium text-white" x-text="p.name"></td>
-                                        <td class="p-4">
-                                            <span x-show="p.owner"
-                                                class="px-2 py-1 rounded bg-blue-900/40 text-blue-300 text-xs border border-blue-800"
-                                                x-text="p.owner"></span>
-                                            <span x-show="!p.owner" class="text-slate-600 text-xs italic">Libre
-                                                (Mercado)</span>
-                                        </td>
-                                        <td class="p-4 text-right font-mono text-green-400"
-                                            x-text="formatMoney(p.value)"></td>
-                                        <td class="p-4 text-right text-xs font-mono"
-                                            :class="p.trendPct > 0 ? 'text-green-500' : (p.trendPct < 0 ? 'text-red-500' : 'text-slate-500')">
-                                            <span x-show="p.trendPct !== 0">
-                                                <i class="fas"
-                                                    :class="p.trendPct > 0 ? 'fa-caret-up' : 'fa-caret-down'"></i>
-                                                <span x-text="Math.abs(p.trendPct) + '%'"></span>
-                                            </span>
-                                            <span x-show="p.trendPct === 0">-</span>
-                                        </td>
-                                        <td class="p-4 text-right text-slate-500 text-xs"
-                                            x-text="p.cost ? formatMoney(p.cost) : '-'"></td>
-                                        <td class="p-4 text-right text-xs"
-                                            :class="p.value - p.cost > 0 ? 'text-green-500' : 'text-red-500'"
-                                            x-text="p.cost ? formatMoney(p.value - p.cost) : '-'"></td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
-                        <div class="p-4 text-center text-slate-600 text-xs">Mostrando <span
-                                x-text="Math.min(5000, filteredPlayers.length)"></span> de <span
-                                x-text="filteredPlayers.length"></span> jugadores</div>
-                    </div>
-                </div>
-
-                <!-- MOVIMIENTOS -->
-                <div x-show="currentView === 'movimientos'" class="space-y-6" x-transition.opacity>
-                    <div class="glass-card p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <input type="text" x-model="filters.search" placeholder="🔍 Buscar..."
-                            class="bg-slate-800 border-slate-700 rounded-lg text-white p-2 outline-none focus:ring-1 focus:ring-blue-500">
-                        <select x-model="filters.team"
-                            class="bg-slate-800 border-slate-700 rounded-lg text-white p-2 outline-none">
-                            <option value="all">Todos los Equipos</option>
-                            <template x-for="(m, name) in managers" :key="name">
-                                <option :value="name" x-text="name"></option>
                             </template>
-                        </select>
-                        <select x-model="filters.type"
-                            class="bg-slate-800 border-slate-700 rounded-lg text-white p-2 outline-none">
-                            <option value="all">Todos los tipos</option>
-                            <option value="transfer">Traspasos</option>
-                            <option value="market">Mercado</option>
-                            <option value="clause">Cláusulas</option>
-                            <option value="reward">Premios</option>
-                        </select>
-                        <div class="text-right text-xs text-slate-500 flex items-center justify-end"><span
-                                x-text="filteredMovements.length"></span> resultados</div>
-                    </div>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-                    <div class="glass-card overflow-hidden">
-                        <table class="w-full">
-                            <thead class="bg-slate-900 text-xs uppercase text-slate-400">
-                                <tr>
-                                    <th class="p-3">Fecha</th>
-                                    <th class="p-3">Tipo</th>
-                                    <th class="p-3">Descripción</th>
-                                    <th class="p-3 text-right">Sobrecoste (Est.)</th>
-                                    <th class="p-3 text-right">Importe</th>
+            <!-- JUGADORES (ALL PLAYERS) -->
+            <div x-show="currentView === 'jugadores'" class="space-y-6" x-transition.opacity>
+                <div class="flex flex-wrap gap-4 mb-4">
+                    <input type="text" x-model="playerFilters.search" placeholder="🔍 Buscar jugador..."
+                        class="bg-slate-800 border-slate-700 rounded-lg p-3 text-white flex-grow focus:ring-2 focus:ring-blue-500 outline-none">
+                    <select x-model="playerFilters.owner"
+                        class="bg-slate-800 border-slate-700 rounded-lg p-3 text-white outline-none">
+                        <option value="all">Todos los Estados</option>
+                        <option value="free">Solo Libres</option>
+                        <option value="owned">Con Dueño</option>
+                    </select>
+                    <select x-model="playerFilters.sort"
+                        class="bg-slate-800 border-slate-700 rounded-lg p-3 text-white outline-none">
+                        <option value="value_desc">Mayor Valor</option>
+                        <option value="value_asc">Menor Valor</option>
+                        <option value="cost_desc">Mayor Coste</option>
+                    </select>
+                </div>
+
+                <div class="glass-card overflow-hidden">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-900 border-b border-slate-700">
+                            <tr class="text-slate-400 text-xs uppercase">
+                                <th class="p-4">Jugador</th>
+                                <th class="p-4">Estado / Dueño</th>
+                                <th class="p-4 text-right">Valor Mercado</th>
+                                <th class="p-4 text-right">24h %</th>
+                                <th class="p-4 text-right">Coste Adquisición</th>
+                                <th class="p-4 text-right">Diff</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800">
+                            <template x-for="p in filteredPlayers.slice(0, 5000)" :key="p.name">
+                                <tr class="hover:bg-slate-800/50 transition-colors">
+                                    <td class="p-4 font-medium text-white" x-text="p.name"></td>
+                                    <td class="p-4">
+                                        <span x-show="p.owner"
+                                            class="px-2 py-1 rounded bg-blue-900/40 text-blue-300 text-xs border border-blue-800"
+                                            x-text="p.owner"></span>
+                                        <span x-show="!p.owner" class="text-slate-600 text-xs italic">Libre
+                                            (Mercado)</span>
+                                    </td>
+                                    <td class="p-4 text-right font-mono text-green-400" x-text="formatMoney(p.value)">
+                                    </td>
+                                    <td class="p-4 text-right text-xs font-mono"
+                                        :class="p.trendPct > 0 ? 'text-green-500' : (p.trendPct < 0 ? 'text-red-500' : 'text-slate-500')">
+                                        <span x-show="p.trendPct !== 0">
+                                            <i class="fas"
+                                                :class="p.trendPct > 0 ? 'fa-caret-up' : 'fa-caret-down'"></i>
+                                            <span x-text="Math.abs(p.trendPct) + '%'"></span>
+                                        </span>
+                                        <span x-show="p.trendPct === 0">-</span>
+                                    </td>
+                                    <td class="p-4 text-right text-slate-500 text-xs"
+                                        x-text="p.cost ? formatMoney(p.cost) : '-'"></td>
+                                    <td class="p-4 text-right text-xs"
+                                        :class="p.value - p.cost > 0 ? 'text-green-500' : 'text-red-500'"
+                                        x-text="p.cost ? formatMoney(p.value - p.cost) : '-'"></td>
                                 </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-800">
-                                <template x-for="m in filteredMovements.slice(0, 5000)" :key="m.id">
-                                    <tr class="hover:bg-slate-800/50">
-                                        <td class="p-3 text-slate-400 text-xs whitespace-nowrap" x-text="m.date"></td>
-                                        <td class="p-3">
-                                            <span class="px-2 py-1 rounded text-[10px] font-bold uppercase" :class="{
+                            </template>
+                        </tbody>
+                    </table>
+                    <div class="p-4 text-center text-slate-600 text-xs">Mostrando <span
+                            x-text="Math.min(5000, filteredPlayers.length)"></span> de <span
+                            x-text="filteredPlayers.length"></span> jugadores</div>
+                </div>
+            </div>
+
+            <!-- MOVIMIENTOS -->
+            <div x-show="currentView === 'movimientos'" class="space-y-6" x-transition.opacity>
+                <div class="glass-card p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <input type="text" x-model="filters.search" placeholder="🔍 Buscar..."
+                        class="bg-slate-800 border-slate-700 rounded-lg text-white p-2 outline-none focus:ring-1 focus:ring-blue-500">
+                    <select x-model="filters.team"
+                        class="bg-slate-800 border-slate-700 rounded-lg text-white p-2 outline-none">
+                        <option value="all">Todos los Equipos</option>
+                        <template x-for="(m, name) in managers" :key="name">
+                            <option :value="name" x-text="name"></option>
+                        </template>
+                    </select>
+                    <select x-model="filters.type"
+                        class="bg-slate-800 border-slate-700 rounded-lg text-white p-2 outline-none">
+                        <option value="all">Todos los tipos</option>
+                        <option value="transfer">Traspasos</option>
+                        <option value="market">Mercado</option>
+                        <option value="clause">Cláusulas</option>
+                        <option value="reward">Premios</option>
+                    </select>
+                    <div class="text-right text-xs text-slate-500 flex items-center justify-end"><span
+                            x-text="filteredMovements.length"></span> resultados</div>
+                </div>
+
+                <div class="glass-card overflow-hidden">
+                    <table class="w-full">
+                        <thead class="bg-slate-900 text-xs uppercase text-slate-400">
+                            <tr>
+                                <th class="p-3">Fecha</th>
+                                <th class="p-3">Tipo</th>
+                                <th class="p-3">Descripción</th>
+                                <th class="p-3 text-right">Sobrecoste (Est.)</th>
+                                <th class="p-3 text-right">Importe</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800">
+                            <template x-for="m in filteredMovements.slice(0, 5000)" :key="m.id">
+                                <tr class="hover:bg-slate-800/50">
+                                    <td class="p-3 text-slate-400 text-xs whitespace-nowrap" x-text="m.date"></td>
+                                    <td class="p-3">
+                                        <span class="px-2 py-1 rounded text-[10px] font-bold uppercase" :class="{
                                                     'bg-green-900/50 text-green-300': m.type === 'transfer' && m.amount > 0,
                                                     'bg-red-900/50 text-red-300': m.type === 'transfer' && m.amount < 0,
                                                     'bg-blue-900/50 text-blue-300': m.type === 'shield',
                                                     'bg-yellow-900/50 text-yellow-300': m.type === 'reward'
                                                 }" x-text="m.type === 'transfer' ? 'Fichaje' : m.type"></span>
-                                        </td>
-                                        <td class="p-3 text-sm text-slate-200">
-                                            <div class="font-bold" x-text="m.player"></div>
-                                            <div class="text-xs text-slate-500 flex items-center gap-2">
-                                                <span x-text="m.seller"></span> <i
-                                                    class="fas fa-arrow-right text-[10px]"></i> <span
-                                                    x-text="m.buyer"></span>
-                                            </div>
-                                        </td>
-                                        <td class="p-3 text-right text-xs font-mono text-slate-400">
-                                            <template x-if="m.type === 'transfer' && marketData[m.player]">
-                                                <span
-                                                    :class="(m.amount - marketData[m.player]) > 0 ? 'text-red-400' : 'text-green-400'">
-                                                    <span
-                                                        x-text="(m.amount - marketData[m.player]) > 0 ? '+' : ''"></span>
-                                                    <span x-text="formatMoney(m.amount - marketData[m.player])"></span>
-                                                </span>
-                                            </template>
-                                            <template x-if="!(m.type === 'transfer' && marketData[m.player])">
-                                                <span>-</span>
-                                            </template>
-                                        </td>
-                                        <td class="p-3 text-right font-mono text-white" x-text="formatMoney(m.amount)">
-                                        </td>
-                                    </tr>
-                                </template>
-                            </tbody>
-                        </table>
-                    </div>
+                                    </td>
+                                    <td class="p-3 text-sm text-slate-200">
+                                        <div class="font-bold" x-text="m.player"></div>
+                                        <div class="text-xs text-slate-500 flex items-center gap-2">
+                                            <span x-text="m.seller"></span> <i
+                                                class="fas fa-arrow-right text-[10px]"></i> <span
+                                                x-text="m.buyer"></span>
+                                        </div>
+                                    </td>
+                                    <td class="p-3 text-right text-xs font-mono text-slate-400">
+                                        <template x-if="m.type === 'transfer' && marketData[m.player]">
+                                            <span
+                                                :class="(m.amount - marketData[m.player]) > 0 ? 'text-red-400' : 'text-green-400'">
+                                                <span x-text="(m.amount - marketData[m.player]) > 0 ? '+' : ''"></span>
+                                                <span x-text="formatMoney(m.amount - marketData[m.player])"></span>
+                                            </span>
+                                        </template>
+                                        <template x-if="!(m.type === 'transfer' && marketData[m.player])">
+                                            <span>-</span>
+                                        </template>
+                                    </td>
+                                    <td class="p-3 text-right font-mono text-white" x-text="formatMoney(m.amount)">
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
                 </div>
-
-                <!-- NEGOCIOS -->
-                <div x-show="currentView === 'negocios'" class="space-y-6" x-transition.opacity>
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <div class="glass-card p-6">
-                            <h3 class="text-lg font-bold text-green-400 mb-4"><i
-                                    class="fas fa-chart-line mr-2"></i>Mejores "Flips" (Profit)</h3>
-                            <div class="space-y-3">
-                                <template x-for="(deal, i) in bestDeals.slice(0,50)" :key="i">
-                                    <div
-                                        class="flex items-center justify-between p-3 bg-slate-800/40 rounded-lg border border-slate-700/50 hover:bg-slate-800 transition-colors">
-                                        <div class="flex items-center gap-3">
-                                            <div class="text-green-500 font-bold text-lg w-6 text-center" x-text="i+1">
-                                            </div>
-                                            <div>
-                                                <div class="font-bold text-white" x-text="deal.player"></div>
-                                                <div class="text-xs text-slate-400" x-text="deal.manager"></div>
-                                            </div>
-                                        </div>
-                                        <div class="text-right">
-                                            <div class="font-mono text-green-400 font-bold"
-                                                x-text="'+' + formatMoney(deal.profit)"></div>
-                                            <div class="text-xs text-slate-500" x-text="deal.roi.toFixed(0) + '% ROI'">
-                                            </div>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-
-                        <div class="glass-card p-6">
-                            <h3 class="text-lg font-bold text-red-400 mb-4"><i
-                                    class="fas fa-level-down-alt mr-2"></i>Peores "Ruinas" (Loss)</h3>
-                            <div class="space-y-3">
-                                <template x-for="(deal, i) in worstDeals.slice(0,50)" :key="i">
-                                    <div
-                                        class="flex items-center justify-between p-3 bg-slate-800/40 rounded-lg border border-slate-700/50 hover:bg-slate-800 transition-colors">
-                                        <div class="flex items-center gap-3">
-                                            <div class="text-red-500 font-bold text-lg w-6 text-center" x-text="i+1">
-                                            </div>
-                                            <div>
-                                                <div class="font-bold text-white" x-text="deal.player"></div>
-                                                <div class="text-xs text-slate-400" x-text="deal.manager"></div>
-                                            </div>
-                                        </div>
-                                        <div class="text-right">
-                                            <div class="font-mono text-red-500 font-bold"
-                                                x-text="formatMoney(deal.profit)"></div>
-                                            <div class="text-xs text-slate-500">Pérdida</div>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-
-                        <div class="glass-card p-6 lg:col-span-2">
-                            <h3 class="text-lg font-bold text-blue-400 mb-4"><i
-                                    class="fas fa-search-dollar mr-2"></i>Análisis de Pujas (Patrones)</h3>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                <template x-for="(stats, mgr) in calculateBidPatterns()" :key="mgr">
-                                    <div class="bg-slate-800/40 p-4 rounded-lg border border-slate-700">
-                                        <div class="font-bold text-white mb-2" x-text="mgr"></div>
-                                        <div class="space-y-1 text-xs">
-                                            <div class="flex justify-between">
-                                                <span class="text-slate-400">Pujas Totales</span>
-                                                <span class="text-white" x-text="stats.total"></span>
-                                            </div>
-                                            <div class="flex justify-between">
-                                                <span class="text-slate-400">Redondas (..000)</span>
-                                                <span class="text-green-400"
-                                                    x-text="((stats.round/stats.total)*100).toFixed(0) + '%'"></span>
-                                            </div>
-                                            <div class="flex justify-between">
-                                                <span class="text-slate-400">Estratégicas (..001)</span>
-                                                <span class="text-yellow-400"
-                                                    x-text="((stats.strategic/stats.total)*100).toFixed(0) + '%'"></span>
-                                            </div>
-                                            <div class="flex justify-between border-t border-slate-700 pt-1 mt-1">
-                                                <span class="text-slate-400">Sobrecoste Medio</span>
-                                                <span class="text-blue-400" x-text="stats.avgOverbid + '%'"></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </template>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
             </div>
+
+            <!-- NEGOCIOS -->
+            <div x-show="currentView === 'negocios'" class="space-y-6" x-transition.opacity>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="glass-card p-6">
+                        <h3 class="text-lg font-bold text-green-400 mb-4"><i class="fas fa-chart-line mr-2"></i>Mejores
+                            "Flips" (Profit)</h3>
+                        <div class="space-y-3">
+                            <template x-for="(deal, i) in bestDeals.slice(0,50)" :key="i">
+                                <div
+                                    class="flex items-center justify-between p-3 bg-slate-800/40 rounded-lg border border-slate-700/50 hover:bg-slate-800 transition-colors">
+                                    <div class="flex items-center gap-3">
+                                        <div class="text-green-500 font-bold text-lg w-6 text-center" x-text="i+1">
+                                        </div>
+                                        <div>
+                                            <div class="font-bold text-white" x-text="deal.player"></div>
+                                            <div class="text-xs text-slate-400" x-text="deal.manager"></div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-mono text-green-400 font-bold"
+                                            x-text="'+' + formatMoney(deal.profit)"></div>
+                                        <div class="text-xs text-slate-500" x-text="deal.roi.toFixed(0) + '% ROI'">
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-6">
+                        <h3 class="text-lg font-bold text-red-400 mb-4"><i class="fas fa-level-down-alt mr-2"></i>Peores
+                            "Ruinas" (Loss)</h3>
+                        <div class="space-y-3">
+                            <template x-for="(deal, i) in worstDeals.slice(0,50)" :key="i">
+                                <div
+                                    class="flex items-center justify-between p-3 bg-slate-800/40 rounded-lg border border-slate-700/50 hover:bg-slate-800 transition-colors">
+                                    <div class="flex items-center gap-3">
+                                        <div class="text-red-500 font-bold text-lg w-6 text-center" x-text="i+1">
+                                        </div>
+                                        <div>
+                                            <div class="font-bold text-white" x-text="deal.player"></div>
+                                            <div class="text-xs text-slate-400" x-text="deal.manager"></div>
+                                        </div>
+                                    </div>
+                                    <div class="text-right">
+                                        <div class="font-mono text-red-500 font-bold" x-text="formatMoney(deal.profit)">
+                                        </div>
+                                        <div class="text-xs text-slate-500">Pérdida</div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-6 lg:col-span-2">
+                        <h3 class="text-lg font-bold text-blue-400 mb-4"><i
+                                class="fas fa-search-dollar mr-2"></i>Análisis de Pujas (Patrones)</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <template x-for="(stats, mgr) in calculateBidPatterns()" :key="mgr">
+                                <div class="bg-slate-800/40 p-4 rounded-lg border border-slate-700">
+                                    <div class="font-bold text-white mb-2" x-text="mgr"></div>
+                                    <div class="space-y-1 text-xs">
+                                        <div class="flex justify-between">
+                                            <span class="text-slate-400">Pujas Totales</span>
+                                            <span class="text-white" x-text="stats.total"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-slate-400">Redondas (..000)</span>
+                                            <span class="text-green-400"
+                                                x-text="((stats.round/stats.total)*100).toFixed(0) + '%'"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="text-slate-400">Estratégicas (..001)</span>
+                                            <span class="text-yellow-400"
+                                                x-text="((stats.strategic/stats.total)*100).toFixed(0) + '%'"></span>
+                                        </div>
+                                        <div class="flex justify-between border-t border-slate-700 pt-1 mt-1">
+                                            <span class="text-slate-400">Sobrecoste Medio</span>
+                                            <span class="text-blue-400" x-text="stats.avgOverbid + '%'"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+    </div>
     </div>
 
     <!-- INTELLIGENCE (PRO) -->
@@ -660,9 +675,19 @@
         </div>
     </div>
 
-    </div>
     </main>
     </div>
+
+    <!-- BOTTOM NAV -->
+    <nav class="bottom-nav">
+        <template x-for="item in navItems" :key="item.id">
+            <a href="#" @click.prevent="currentView = item.id" class="nav-item"
+                :class="{ 'active': currentView === item.id }">
+                <i :class="item.icon"></i>
+                <span x-text="item.label" class="mt-1" style="font-size: 10px;"></span>
+            </a>
+        </template>
+    </nav>
 
     <script>
         function gamePlayApp() {
@@ -670,13 +695,11 @@
                 collapsed: false,
                 currentView: 'dashboard',
                 navItems: [
-                    { id: 'dashboard', label: 'Dashboard', icon: 'fas fa-home' },
-                    { id: 'clasificacion', label: 'Clasificación', icon: 'fas fa-ranking-star' },
-                    { id: 'jugadores', label: 'Mercado & Jugadores', icon: 'fas fa-users' },
-                    { id: 'movimientos', label: 'Movimientos', icon: 'fas fa-exchange-alt' },
-                    { id: 'negocios', label: 'Negocios', icon: 'fas fa-briefcase' },
-                    { id: 'intelligence', label: 'Inteligencia 🧠', icon: 'fas fa-brain' },
-                    { id: 'importar', label: 'Importar / Config', icon: 'fas fa-cogs' }
+                    { id: 'dashboard', label: 'Inicio', icon: 'fas fa-home' },
+                    { id: 'intelligence', label: 'Intel.', icon: 'fas fa-brain' },
+                    { id: 'negocios', label: 'Negocios', icon: 'fas fa-chart-pie' },
+                    { id: 'jugadores', label: 'Mercado', icon: 'fas fa-users' },
+                    { id: 'importar', label: 'Ajustes', icon: 'fas fa-cog' }
                 ],
 
                 managers: {
@@ -690,15 +713,17 @@
                 movements: [],
                 pendingMovements: [],
                 marketData: typeof MARKET_DATA !== 'undefined' ? MARKET_DATA : {},
-                marketTrends: typeof MARKET_TRENDS !== 'undefined' ? MARKET_TRENDS : {},
                 marketInfo: typeof MARKET_INFO !== 'undefined' ? MARKET_INFO : {},
+                marketTrends: typeof MARKET_TRENDS !== 'undefined' ? MARKET_TRENDS : {},
+
+                // Persistence
                 logs: [],
+                rawInput: '',
 
                 tradingHistory: { closedDeals: [], rosters: {}, managerStats: {} },
 
                 filters: { search: '', team: 'all', type: 'all' },
                 playerFilters: { search: '', owner: 'all', sort: 'value_desc' },
-                rawInput: '',
 
                 // COMPUTED
                 get filteredMovements() {
@@ -827,19 +852,26 @@
                         try {
                             const parsed = JSON.parse(saved);
                             this.movements = parsed.movements || [];
-                            // Initial migration of managers if needed
                             if (parsed.managers) {
-                                Object.keys(this.managers).forEach(k => {
-                                    if (parsed.managers[k]) {
-                                        this.managers[k].teamValue = parsed.managers[k].teamValue;
-                                        this.managers[k].clauseExpenses = parsed.managers[k].clauseExpenses;
-                                    }
-                                });
+                                // Merge logic...
+                                this.managers = { ...this.managers, ...parsed.managers };
                             }
                             if (parsed.marketData) this.marketData = parsed.marketData;
+                            if (parsed.marketInfo) this.marketInfo = parsed.marketInfo;
                             this.addLog('Datos cargados de memoria', 'success');
                         } catch (e) { console.error(e); }
+                    } else if (typeof DEFAULT_MOVEMENTS !== 'undefined') {
+                        // First Run: Load Historical Data
+                        console.log("Loading default movements...");
+                        this.processInput(DEFAULT_MOVEMENTS);
+
+                        // Load Market Data from Global Constants
+                        if (typeof MARKET_DATA !== 'undefined') this.marketData = MARKET_DATA;
+                        if (typeof MARKET_INFO !== 'undefined') this.marketInfo = MARKET_INFO;
+
+                        this.addLog('Histórico inicial cargado', 'success');
                     }
+
                     this.reconstructTradingHistory();
 
                     this.$watch('movements', () => { this.debouncedSaveData(); this.reconstructTradingHistory(); });
