@@ -13,6 +13,21 @@
             darkMode: 'class',
             theme: {
                 extend: {
+                    animation: {
+                        'gradient-x': 'gradient-x 3s ease infinite',
+                    },
+                    keyframes: {
+                        'gradient-x': {
+                            '0%, 100%': {
+                                'background-size': '200% 200%',
+                                'background-position': 'left center'
+                            },
+                            '50%': {
+                                'background-size': '200% 200%',
+                                'background-position': 'right center'
+                            },
+                        },
+                    },
                     colors: {
                         gray: {
                             850: '#1f2937',
@@ -89,8 +104,10 @@
                         class="w-8 h-8 rounded bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center font-bold text-black text-xs">
                         GP</div>
                     <span
-                        class="font-bold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-neon-blue to-neon-purple">GamePlay
+                        class="font-bold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-neon-blue to-neon-purple animate-gradient-x">GamePlay
                         Manager</span>
+                    <span
+                        class="ml-2 px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 text-[10px] tracking-widest font-bold border border-yellow-500/30 uppercase shadow-[0_0_10px_rgba(234,179,8,0.2)]">Premium</span>
                 </div>
                 <div class="flex space-x-4">
                     <button @click="currentTab = 'dashboard'" :class="{'text-neon-blue': currentTab === 'dashboard'}"
@@ -1078,42 +1095,154 @@
                 },
 
                 // CHARTS
+                // CHARTS
+                parseDate(dateStr) {
+                    // Formats: "DD/MM/YYYY", "DD/MM/YYYY HH:MM", "Sin fecha"
+                    if (!dateStr || dateStr === 'Sin fecha') return new Date(0);
+
+                    // Handle "Today HH:MM" which normalized looks like "DD/MM/YYYY HH:MM"
+                    const [datePart, timePart] = dateStr.split(' ');
+                    const [d, m, y] = datePart.split('/');
+
+                    if (!d || !m || !y) return new Date(0);
+
+                    const date = new Date(y, m - 1, d);
+                    if (timePart) {
+                        const [hh, mm] = timePart.split(':');
+                        date.setHours(hh || 0, mm || 0);
+                    }
+                    return date;
+                },
+
                 updateCharts() {
                     const ctx = document.getElementById('patrimonyChart');
                     if (!ctx) return;
 
-                    // Simple chart placeholder
-                    // needs real historical calculation which is complex requiring date parsing
-                    // skipping complex implementation for brevity, implementing basic bar chart of current patrimony
+                    // 1. Sort movements chronologically
+                    const sortedMovs = [...this.movements].sort((a, b) => {
+                        return this.parseDate(a.date) - this.parseDate(b.date);
+                    });
 
-                    const labels = this.sortedManagers.map(m => m.name);
-                    const dataPatrimony = this.sortedManagers.map(m => m.balance + m.teamValue);
+                    // 2. Replay History
+                    const balances = {};
+                    // Initialize with managers' initial budget settings
+                    // NOTE: If movements are complete history, this works perfectly. 
+                    // If partial, it shows relative change from base.
+                    const initialBudgets = {};
+
+                    // Colors mapping
+                    const colors = {
+                        "Vigar FC": '#00f3ff', // Neon Blue
+                        "GOLENCIERRO FC": '#00ff9d', // Neon Green
+                        "Pablinistan FC": '#ff00d4', // Neon Pink
+                        "Alcatamy eSports By": '#bc13fe', // Neon Purple
+                        "Visite La Manga FC": '#ffff00', // Yellow
+                        "Morenazos FC": '#ff0000'  // Red
+                    };
+
+                    Object.keys(this.managers).forEach(k => {
+                        balances[k] = this.managers[k].initialBudget;
+                        initialBudgets[k] = this.managers[k].initialBudget;
+                    });
+
+                    const labels = [];
+                    const datasets = Object.keys(this.managers).map(k => ({
+                        label: k,
+                        data: [], // {x, y}
+                        borderColor: colors[k] || '#888',
+                        backgroundColor: (colors[k] || '#888') + '20',
+                        tension: 0.3,
+                        borderWidth: 2,
+                        pointRadius: 0 // Clean look
+                    }));
+
+                    // Add Start Point (Date 0 or First Movement Date - 1 day)
+                    // Simplified: Start pushing data from first movement
+
+                    let currentDateStr = '';
+
+                    sortedMovs.forEach(m => {
+                        // Apply Transaction
+                        if (m.type === 'transfer') {
+                            const amount = parseInt(m.amount);
+                            if (balances[m.buyer] !== undefined) balances[m.buyer] -= amount;
+                            if (balances[m.seller] !== undefined) balances[m.seller] += amount;
+                        } else if (m.type === 'reward') {
+                            const amount = parseInt(m.amount);
+                            if (balances[m.beneficiary] !== undefined) balances[m.beneficiary] += amount;
+                        }
+
+                        // Store point only if date changes (Daily close)
+                        const isoDate = this.parseDate(m.date).toLocaleDateString('es-ES'); // DD/MM/YYYY
+
+                        if (isoDate !== currentDateStr) {
+                            currentDateStr = isoDate;
+                            labels.push(isoDate.substring(0, 5)); // "DD/MM"
+
+                            // Push value for each dataset
+                            datasets.forEach(ds => {
+                                ds.data.push(balances[ds.label]);
+                            });
+                        } else {
+                            // Update last point value if same day
+                            datasets.forEach(ds => {
+                                if (ds.data.length > 0) {
+                                    ds.data[ds.data.length - 1] = balances[ds.label];
+                                }
+                            });
+                        }
+                    });
 
                     if (window.myChart) window.myChart.destroy();
 
                     window.myChart = new Chart(ctx, {
-                        type: 'bar',
+                        type: 'line',
                         data: {
                             labels: labels,
-                            datasets: [{
-                                label: 'Patrimonio Actual',
-                                data: dataPatrimony,
-                                backgroundColor: ['#00f3ff', '#00ff9d', '#ff00d4', '#bc13fe', '#ffff00', '#ff0000'],
-                                borderWidth: 0
-                            }]
+                            datasets: datasets
                         },
                         options: {
                             responsive: true,
+                            interaction: {
+                                mode: 'index',
+                                intersect: false,
+                            },
                             plugins: {
-                                legend: { display: false }
+                                legend: {
+                                    position: 'bottom',
+                                    labels: { color: '#9ca3af', font: { size: 10 } }
+                                },
+                                tooltip: {
+                                    backgroundColor: 'rgba(17, 24, 39, 0.9)',
+                                    titleColor: '#fff',
+                                    bodyColor: '#ccc',
+                                    borderColor: '#374151',
+                                    borderWidth: 1,
+                                    callbacks: {
+                                        label: function (context) {
+                                            let label = context.dataset.label || '';
+                                            if (label) {
+                                                label += ': ';
+                                            }
+                                            if (context.parsed.y !== null) {
+                                                label += new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(context.parsed.y);
+                                            }
+                                            return label;
+                                        }
+                                    }
+                                }
                             },
                             scales: {
                                 y: {
-                                    ticks: { color: '#6b7280' },
-                                    grid: { color: '#374151' }
+                                    ticks: {
+                                        color: '#6b7280',
+                                        callback: function (value) { return (value / 1000000).toFixed(0) + 'M'; }
+                                    },
+                                    grid: { color: '#374151', drawBorder: false }
                                 },
                                 x: {
-                                    ticks: { color: '#9ca3af' }
+                                    ticks: { color: '#9ca3af', maxTicksLimit: 10 },
+                                    grid: { display: false }
                                 }
                             }
                         }
