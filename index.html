@@ -58,6 +58,7 @@
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="market_data.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
@@ -118,6 +119,10 @@
                         class="hover:text-white transition-colors text-sm font-medium">Estadísticas</button>
                     <button @click="currentTab = 'clauses'" :class="{'text-neon-purple': currentTab === 'clauses'}"
                         class="hover:text-white transition-colors text-sm font-medium">Cláusulas</button>
+                    <button @click="currentTab = 'advanced'" :class="{'text-yellow-400': currentTab === 'advanced'}"
+                        class="hover:text-white transition-colors text-sm font-medium flex items-center gap-1">
+                        <span>🚀</span> Métricas Avanzadas
+                    </button>
                 </div>
             </div>
         </div>
@@ -364,6 +369,105 @@
             </div>
         </div>
 
+        <!-- MOVEMENTS VIEW -->
+        <div x-show="currentTab === 'movements'" x-transition.opacity>
+            <!-- Filters -->
+            <div
+                class="glass-panel p-4 rounded-xl mb-6 flex flex-wrap gap-4 items-center sticky top-20 z-40 backdrop-blur-md bg-gray-900/80 border border-neon-blue/20">
+                <div class="flex-grow relative">
+                    <svg class="w-5 h-5 absolute left-3 top-2.5 text-gray-500" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                    <input type="text" x-model="filters.search" placeholder="Buscar jugador, equipo..."
+                        class="w-full bg-gray-900 border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-white focus:ring-1 focus:ring-neon-blue outline-none">
+                </div>
+
+                <select x-model="filters.team"
+                    class="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white outline-none">
+                    <option value="all">Todos los Equipos</option>
+                    <template x-for="m in Object.keys(managers)" :key="m">
+                        <option :value="m" x-text="m"></option>
+                    </template>
+                </select>
+
+                <select x-model="filters.type"
+                    class="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white outline-none">
+                    <option value="all">Todos los Tipos</option>
+                    <option value="transfer">Transferencias</option>
+                    <option value="reward">Premios</option>
+                    <option value="shield">Blindajes</option>
+                </select>
+
+                <div class="text-xs text-gray-400 font-mono">
+                    <span x-text="filteredMovements.length"></span> resultados
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="glass-panel rounded-xl overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-800 text-gray-400 text-xs uppercase">
+                            <tr>
+                                <th class="p-3">Fecha</th>
+                                <th class="p-3">Tipo</th>
+                                <th class="p-3">Detalle</th>
+                                <th class="p-3 text-right">Importe</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-700 bg-gray-900/50">
+                            <template x-for="(mov, index) in filteredMovements" :key="mov.id || index">
+                                <tr class="hover:bg-white/5 transition-colors">
+                                    <td class="p-3 font-mono text-xs text-gray-500" x-text="mov.date"></td>
+                                    <td class="p-3">
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
+                                            :class="{
+                                                 'bg-blue-900/50 text-blue-300': mov.type === 'transfer',
+                                                 'bg-yellow-900/50 text-yellow-300': mov.type === 'reward',
+                                                 'bg-purple-900/50 text-purple-300': mov.type === 'shield'
+                                             }" x-text="mov.type"></span>
+                                    </td>
+                                    <td class="p-3">
+                                        <div x-show="mov.type === 'transfer'">
+                                            <div class="font-bold text-white flex items-center gap-2">
+                                                <span x-text="mov.player"></span>
+                                            </div>
+                                            <div class="text-xs text-gray-500 mt-1">
+                                                <span x-text="mov.seller" class="font-medium"
+                                                    :class="mov.seller === filters.team ? 'text-neon-blue' : ''"></span>
+                                                <span class="mx-1">➜</span>
+                                                <span x-text="mov.buyer" class="font-medium"
+                                                    :class="mov.buyer === filters.team ? 'text-neon-green' : ''"></span>
+                                            </div>
+                                        </div>
+                                        <div x-show="mov.type !== 'transfer'">
+                                            <span x-text="mov.details || mov.subtype || mov.type"
+                                                class="text-white"></span>
+                                            <span x-show="mov.beneficiary" x-text="'PARA: ' + mov.beneficiary"
+                                                class="text-xs text-gray-500 block mt-1"></span>
+                                        </div>
+                                    </td>
+                                    <td class="p-3 text-right font-mono"
+                                        :class="mov.amount > 0 ? 'text-green-400' : 'text-gray-500'"
+                                        x-text="formatMoney(mov.amount)"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                    <div x-show="filteredMovements.length === 0"
+                        class="p-12 text-center text-gray-500 flex flex-col items-center">
+                        <svg class="w-12 h-12 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <p>No se encontraron movimientos con estos filtros.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- CLAUSES VIEW -->
         <div x-show="currentTab === 'clauses'" x-transition.opacity>
             <div class="max-w-3xl mx-auto glass-panel rounded-xl p-8">
@@ -477,6 +581,137 @@
             </div>
         </div>
 
+        <!-- ADVANCED METRICS VIEW -->
+        <div x-show="currentTab === 'advanced'" x-transition.opacity class="space-y-8">
+            <h2 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-neon-pink to-yellow-400">
+                📊 Métricas de Mercado & ROI</h2>
+
+            <!-- Manager Analysis -->
+            <div class="glass-panel p-6 rounded-xl">
+                <h3 class="text-lg font-bold mb-4 text-white">Rendimiento por Manager</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left text-gray-400">
+                        <thead class="text-xs uppercase bg-gray-800 text-neon-blue">
+                            <tr>
+                                <th class="px-4 py-3">Manager</th>
+                                <th class="px-4 py-3 text-right">Inversión Total</th>
+                                <th class="px-4 py-3 text-right">Ventas Totales</th>
+                                <th class="px-4 py-3 text-right">Beneficio Cerrado</th>
+                                <th class="px-4 py-3 text-right">Valor Plantilla Actual</th>
+                                <th class="px-4 py-3 text-right">Beneficio Latente</th>
+                                <th class="px-4 py-3 text-right">ROI (Realizado + Latente)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template x-for="stat in marketValuation" :key="stat.name">
+                                <tr class="border-b border-gray-800 hover:bg-gray-800/50">
+                                    <td class="px-4 py-3 font-medium text-white" x-text="stat.name"></td>
+                                    <td class="px-4 py-3 text-right"
+                                        x-text="formatMoney(tradingHistory.managerStats[stat.name]?.buys || 0)"></td>
+                                    <td class="px-4 py-3 text-right"
+                                        x-text="formatMoney(tradingHistory.managerStats[stat.name]?.sales || 0)"></td>
+                                    <td class="px-4 py-3 text-right"
+                                        :class="(tradingHistory.managerStats[stat.name]?.profit || 0) > 0 ? 'text-green-400' : 'text-red-400'"
+                                        x-text="formatMoney(tradingHistory.managerStats[stat.name]?.profit || 0)"></td>
+                                    <td class="px-4 py-3 text-right text-yellow-300"
+                                        x-text="formatMoney(stat.marketValue)"></td>
+                                    <td class="px-4 py-3 text-right"
+                                        :class="stat.unrealizedProfit > 0 ? 'text-green-400' : 'text-red-400'"
+                                        x-text="formatMoney(stat.unrealizedProfit)"></td>
+                                    <td class="px-4 py-3 text-right font-bold">
+                                        <span
+                                            x-text="((((tradingHistory.managerStats[stat.name]?.profit || 0) + stat.unrealizedProfit) / ((tradingHistory.managerStats[stat.name]?.buys || 1) + 1)) * 100).toFixed(1) + '%'"></span>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Top Deals Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Best Deals -->
+                <div class="glass-panel p-6 rounded-xl">
+                    <h3 class="text-lg font-bold mb-4 text-green-400">🔥 Top 10 Mejores Negocios (Cerrados)</h3>
+                    <div class="space-y-3">
+                        <template x-for="(deal, idx) in bestDeals.slice(0, 10)" :key="idx">
+                            <div
+                                class="flex justify-between items-center p-2 bg-gray-800/30 rounded border border-gray-700/50">
+                                <div>
+                                    <div class="font-bold text-white" x-text="deal.player"></div>
+                                    <div class="text-xs text-gray-500" x-text="deal.manager + ' • ' + deal.date"></div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-green-400 font-bold" x-text="'+' + formatMoney(deal.profit)"></div>
+                                    <div class="text-xs text-gray-400" x-text="'ROI: ' + deal.roi.toFixed(1) + '%'">
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- Worst Deals -->
+                <div class="glass-panel p-6 rounded-xl">
+                    <h3 class="text-lg font-bold mb-4 text-red-400">📉 Top 10 Peores Negocios (Cerrados)</h3>
+                    <div class="space-y-3">
+                        <template x-for="(deal, idx) in worstDeals.slice(0, 10)" :key="idx">
+                            <div
+                                class="flex justify-between items-center p-2 bg-gray-800/30 rounded border border-gray-700/50">
+                                <div>
+                                    <div class="font-bold text-white" x-text="deal.player"></div>
+                                    <div class="text-xs text-gray-500" x-text="deal.manager + ' • ' + deal.date"></div>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-red-400 font-bold" x-text="formatMoney(deal.profit)"></div>
+                                    <div class="text-xs text-gray-400" x-text="'Compra: ' + formatMoney(deal.buyPrice)">
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Most Expensive Lists -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Top Sales -->
+                <div class="glass-panel p-6 rounded-xl">
+                    <h3 class="text-lg font-bold mb-4 text-neon-blue">💰 Top 15 Ventas Más Caras</h3>
+                    <div class="max-h-96 overflow-y-auto pr-2">
+                        <ul class="space-y-2">
+                            <template x-for="(mov, idx) in topSales.slice(0, 15)" :key="idx">
+                                <li class="flex justify-between text-sm border-b border-gray-800 pb-1">
+                                    <span class="text-gray-300"><span x-text="idx+1"></span>. <span x-text="mov.player"
+                                            class="font-bold text-white"></span> <span class="text-xs text-gray-500"
+                                            x-text="'(' + mov.seller + ')'"></span></span>
+                                    <span class="text-neon-blue font-mono" x-text="formatMoney(mov.amount)"></span>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+                </div>
+                <!-- Top Compras -->
+                <div class="glass-panel p-6 rounded-xl">
+                    <h3 class="text-lg font-bold mb-4 text-neon-pink">💎 Top 15 Compras Más Caras</h3>
+                    <div class="max-h-96 overflow-y-auto pr-2">
+                        <ul class="space-y-2">
+                            <template x-for="(mov, idx) in topPurchases.slice(0, 15)" :key="idx">
+                                <li class="flex justify-between text-sm border-b border-gray-800 pb-1">
+                                    <span class="text-gray-300"><span x-text="idx+1"></span>. <span x-text="mov.player"
+                                            class="font-bold text-white"></span> <span class="text-xs text-gray-500"
+                                            x-text="'(' + mov.buyer + ')'"></span></span>
+                                    <span class="text-neon-pink font-mono" x-text="formatMoney(mov.amount)"></span>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
     </main>
 
     <!-- LOGIC -->
@@ -525,6 +760,83 @@
                 },
                 movements: [], // Array flat de todos los movimientos
                 pendingMovements: [], // Staging area
+                marketData: typeof MARKET_DATA !== 'undefined' ? MARKET_DATA : {},
+                filters: {
+                    search: '',
+                    team: 'all',
+                    type: 'all'
+                },
+                tradingHistory: { closedDeals: [], rosters: {}, managerStats: {} },
+
+                get filteredMovements() {
+                    return this.movements.filter(m => {
+                        const search = this.filters.search.toLowerCase();
+                        const matchesSearch = !search ||
+                            m.player.toLowerCase().includes(search) ||
+                            m.buyer.toLowerCase().includes(search) ||
+                            m.seller.toLowerCase().includes(search);
+                        const matchesTeam = this.filters.team === 'all' || m.buyer === this.filters.team || m.seller === this.filters.team;
+                        const matchesType = this.filters.type === 'all' || m.type === this.filters.type;
+                        return matchesSearch && matchesTeam && matchesType;
+                    });
+                },
+
+                reconstructTradingHistory() {
+                    const sorted = [...this.movements].sort((a, b) => this.parseDate(a.date) - this.parseDate(b.date));
+                    const rosters = {};
+                    const closedDeals = [];
+                    const managerStats = {};
+
+                    Object.keys(this.managers).forEach(m => {
+                        rosters[m] = {};
+                        managerStats[m] = { name: m, buys: 0, sales: 0, profit: 0, dealsCount: 0 };
+                    });
+
+                    sorted.forEach(m => {
+                        const amt = parseInt(m.amount) || 0;
+                        if (m.type === 'transfer') {
+                            if (rosters[m.seller] && rosters[m.seller][m.player]) {
+                                const cost = rosters[m.seller][m.player].cost;
+                                const profit = amt - cost;
+                                const roi = cost > 0 ? (profit / cost) * 100 : 0;
+                                closedDeals.push({ player: m.player, manager: m.seller, buyPrice: cost, sellPrice: amt, profit, roi, date: m.date });
+                                if (managerStats[m.seller]) {
+                                    managerStats[m.seller].sales += amt;
+                                    managerStats[m.seller].profit += profit;
+                                    managerStats[m.seller].dealsCount++;
+                                }
+                                delete rosters[m.seller][m.player];
+                            } else if (managerStats[m.seller]) {
+                                managerStats[m.seller].sales += amt;
+                            }
+                            if (managerStats[m.buyer]) {
+                                if (!rosters[m.buyer]) rosters[m.buyer] = {};
+                                rosters[m.buyer][m.player] = { cost: amt, date: m.date };
+                                managerStats[m.buyer].buys += amt;
+                            }
+                        }
+                    });
+                    this.tradingHistory = { closedDeals, rosters, managerStats };
+                },
+                get topSales() { return [...this.movements].filter(m => m.type === 'transfer').sort((a, b) => parseInt(b.amount) - parseInt(a.amount)).slice(0, 50); },
+                get topPurchases() { return this.topSales; },
+                get bestDeals() { if (!this.tradingHistory.closedDeals.length) this.reconstructTradingHistory(); return [...this.tradingHistory.closedDeals].sort((a, b) => b.profit - a.profit).slice(0, 50); },
+                get worstDeals() { if (!this.tradingHistory.closedDeals.length) this.reconstructTradingHistory(); return [...this.tradingHistory.closedDeals].sort((a, b) => a.profit - b.profit).slice(0, 50); },
+                get marketValuation() {
+                    if (!Object.keys(this.tradingHistory.rosters).length) this.reconstructTradingHistory();
+                    return Object.keys(this.tradingHistory.rosters).map(mgr => {
+                        let totalValue = 0;
+                        let totalInvested = 0;
+                        const roster = this.tradingHistory.rosters[mgr];
+                        Object.keys(roster).forEach(pName => {
+                            let val = this.marketData[pName] || 0;
+                            if (val === 0) { const found = Object.keys(this.marketData).find(k => k.includes(pName) || pName.includes(k)); if (found) val = this.marketData[found]; }
+                            totalValue += val;
+                            totalInvested += roster[pName].cost;
+                        });
+                        return { name: mgr, marketValue: totalValue, invested: totalInvested, unrealizedProfit: totalValue - totalInvested };
+                    });
+                },
 
                 async initApp() {
                     // Initialize debouncers
@@ -741,12 +1053,88 @@
                 },
 
                 // DATA PROCESSING
+                parseMarketData(htmlContent) {
+                    try {
+                        const parser = new DOMParser();
+                        const doc = parser.parseFromString(htmlContent, 'text/html');
+                        // Strategy: Look for specific class structures
+                        // Cards usually share a common class or structure. 
+                        // We found names in 'MuiTypography-body2' and price in 'MuiTypography-body1'.
+
+                        const nameNodes = Array.from(doc.querySelectorAll('p[class*="MuiTypography-body2"]'));
+                        let updatedCount = 0;
+
+                        nameNodes.forEach(node => {
+                            const name = node.textContent.trim();
+                            // Value is usually in the NEXT sibling container or similar structure.
+                            // Looking at the provided HTML structure:
+                            // Name is inside a div.
+                            // Market Value is inside the same parent container, usually a <p> with body1 class coming AFTER the name div.
+
+                            // Traverse up to the card container might be safer, but let's try finding the next body1.
+                            // The HTML showed: <div>...<p name>...</div> <p value>...
+
+                            // Attempt to find value node in proximity
+                            // We can use a Regex on the `innerHTML` of the parent card to be safer if DOM traversal is tricky.
+                            // But let's try DOM traversal:
+                            // Go up to the card wrapper (usually contains the image, name, values)
+                            let cardParams = node.closest('div.MuiBox-root.css-1j0r1in') || node.parentElement.parentElement;
+
+                            if (cardParams) {
+                                const valueNode = cardParams.querySelector('p[class*="MuiTypography-body1"]');
+                                if (valueNode) {
+                                    const valStr = valueNode.textContent.replace(/[€\.]/g, '').trim();
+                                    const val = parseInt(valStr);
+                                    if (!isNaN(val)) {
+                                        this.marketData[name] = val;
+                                        updatedCount++;
+                                    }
+                                }
+                            }
+                        });
+
+                        this.addLog(`Mercado actualizado: ${updatedCount} jugadores.`, 'success');
+                        this.debouncedSaveData();
+                        this.debouncedUpdateCharts(); // Recalc stats
+
+                    } catch (e) {
+                        console.error(e);
+                        this.addLog('Error analizando HTML de mercado', 'error');
+                        // Fallback to Regex if DOM fails?
+                        this.parseMarketDataRegex(htmlContent);
+                    }
+                },
+
+                parseMarketDataRegex(text) {
+                    // Fallback Regex
+                    const parts = text.split('class="MuiBox-root css-1j0r1in"');
+                    let count = 0;
+                    parts.forEach(part => {
+                        const nameMatch = part.match(/MuiTypography-body2[^>]*>\s*([^<]+)<\/p>/);
+                        const valMatch = part.match(/MuiTypography-body1[^>]*>\s*([\d\.]+) €<\/p>/);
+
+                        if (nameMatch && valMatch) {
+                            const name = nameMatch[1].trim();
+                            const val = parseInt(valMatch[1].replace(/\./g, ''));
+                            this.marketData[name] = val;
+                            count++;
+                        }
+                    });
+                    if (count > 0) this.addLog(`Mercado actualizado (Regex): ${count} jugadores.`, 'success');
+                },
+
                 processInput() {
                     const text = this.rawInput;
                     if (!text.trim()) return;
 
                     const startTime = performance.now();
                     let addedCount = 0;
+
+                    // ⚡ DETECCIÓN HTML (Mercado)
+                    if (text.includes('<html') || text.includes('MuiTypography') || text.includes('__NEXT_DATA__')) {
+                        this.parseMarketData(text);
+                        return;
+                    }
 
                     // ⚡ OPTIMIZACIÓN: Usar Set para O(1) lookups
                     const existingIds = new Set(this.movements.map(m => m.id));
@@ -999,6 +1387,7 @@
                     const data = {
                         managers: this.managers,
                         movements: this.movements,
+                        marketData: this.marketData, // Persist dynamic market data
                         lastUpdate: Date.now()
                     };
 
@@ -1018,6 +1407,7 @@
 
                                 // Load and Sanitize Managers
                                 let loadedManagers = val.managers || {};
+                                if (val.marketData) this.marketData = val.marketData; // Load dynamic market data
 
                                 // Official allowed keys
                                 const allowedKeys = ["Vigar FC", "GOLENCIERRO FC", "Pablinistan FC", "Alcatamy eSports By", "Visite La Manga FC", "Morenazos FC"];
