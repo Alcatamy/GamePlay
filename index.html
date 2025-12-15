@@ -89,12 +89,20 @@
             letter-spacing: -0.025em;
         }
 
-        /* Mobile Layout */
+        /* Layout Container */
         .app-container {
-            max-width: 600px;
-            /* Mobile focused max width */
+            width: 100%;
+            max-width: 1280px;
+            /* Adapts to large screens */
             margin: 0 auto;
             padding: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .app-container {
+                padding: 16px;
+                padding-bottom: 100px;
+            }
         }
 
         /* Glass Cards */
@@ -860,17 +868,19 @@
                             if (parsed.marketInfo) this.marketInfo = parsed.marketInfo;
                             this.addLog('Datos cargados de memoria', 'success');
                         } catch (e) { console.error(e); }
-                    } else if (typeof DEFAULT_MOVEMENTS !== 'undefined') {
-                        // First Run: Load Historical Data
-                        console.log("Loading default movements...");
-                        this.processInput(DEFAULT_MOVEMENTS);
-
-                        // Load Market Data from Global Constants
-                        if (typeof MARKET_DATA !== 'undefined') this.marketData = MARKET_DATA;
-                        if (typeof MARKET_INFO !== 'undefined') this.marketInfo = MARKET_INFO;
-
-                        this.addLog('Histórico inicial cargado', 'success');
                     }
+
+                    // CHECK: If movements empty (either new user or cleared local), load Default History/Market
+                    if (this.movements.length === 0 && typeof DEFAULT_MOVEMENTS !== 'undefined') {
+                        console.log("Movements empty. Loading default history...");
+                        this.processInput(DEFAULT_MOVEMENTS);
+                        this.addLog('Histórico inicial cargado por defecto', 'info');
+                    }
+
+                    // Always try to update Market Data from Global Constants if local is missing or old
+                    // (Actually, we prefer the scraped JS file if it exists, so let's merge if empty)
+                    if (typeof MARKET_DATA !== 'undefined' && Object.keys(this.marketData).length === 0) this.marketData = MARKET_DATA;
+                    if (typeof MARKET_INFO !== 'undefined' && Object.keys(this.marketInfo).length === 0) this.marketInfo = MARKET_INFO;
 
                     this.reconstructTradingHistory();
 

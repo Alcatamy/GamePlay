@@ -1,0 +1,35 @@
+name: Market Sync
+on:
+  schedule:
+    - cron: '0 */12 * * *' # Every 12 hours
+  workflow_dispatch:
+
+jobs:
+  scrape-market:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install playwright
+          playwright install chromium
+          
+      - name: Run Scraper
+        run: python .github/scripts/scrape_market.py
+        
+      - name: Commit and Push
+        run: |
+          git config --global user.name 'MarketBot'
+          git config --global user.email 'bot@fantasy.com'
+          git add market_data.js
+          git commit -m "Auto: Update Market Data $(date +'%d/%m/%Y')" || exit 0
+          git push
