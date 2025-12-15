@@ -1484,64 +1484,66 @@
     </main>
 
     <!-- MOBILE BOTTOM NAVIGATION -->
-    <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-50 glass-panel border-t border-gray-800 safe-area-bottom">
-        <div class="grid grid-cols-5 gap-1 px-2 py-2">
+    <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-50 glass-panel border-t border-gray-800"
+        style="padding-bottom: env(safe-area-inset-bottom);">
+        <!-- Popup Menu (outside buttons for proper layering) -->
+        <div x-show="mobileMenuOpen" x-cloak x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+            @click.outside="mobileMenuOpen = false"
+            class="absolute bottom-full right-2 mb-2 w-48 glass-panel rounded-xl border border-gray-700 shadow-2xl p-2 space-y-1 z-[60]">
+            <button @click="currentTab = 'stats'; mobileMenuOpen = false"
+                class="w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-800 active:bg-gray-700"
+                :class="currentTab === 'stats' ? 'text-neon-pink bg-neon-pink/10' : 'text-gray-300'">
+                📈 Estadísticas
+            </button>
+            <button @click="currentTab = 'clauses'; mobileMenuOpen = false"
+                class="w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-800 active:bg-gray-700"
+                :class="currentTab === 'clauses' ? 'text-neon-purple bg-neon-purple/10' : 'text-gray-300'">
+                ⚖️ Cláusulas
+            </button>
+            <button @click="currentTab = 'advanced'; mobileMenuOpen = false"
+                class="w-full text-left px-3 py-2.5 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-800 active:bg-gray-700"
+                :class="currentTab === 'advanced' ? 'text-yellow-400 bg-yellow-400/10' : 'text-gray-300'">
+                🚀 Métricas
+            </button>
+        </div>
+
+        <!-- Navigation Buttons -->
+        <div class="flex justify-around items-center px-1 py-1.5">
             <button @click="currentTab = 'dashboard'"
-                :class="currentTab === 'dashboard' ? 'text-neon-blue bg-neon-blue/10' : 'text-gray-400'"
-                class="flex flex-col items-center justify-center p-2 rounded-lg transition-all">
-                <span class="text-xl">📊</span>
-                <span class="text-[10px] mt-0.5 font-medium">Dashboard</span>
+                :class="currentTab === 'dashboard' ? 'text-neon-blue' : 'text-gray-500'"
+                class="flex flex-col items-center justify-center p-1.5 min-w-[60px]">
+                <span class="text-lg">📊</span>
+                <span class="text-[9px] mt-0.5">Dashboard</span>
             </button>
             <button @click="currentTab = 'parser'"
-                :class="currentTab === 'parser' ? 'text-neon-green bg-neon-green/10' : 'text-gray-400'"
-                class="flex flex-col items-center justify-center p-2 rounded-lg transition-all">
-                <span class="text-xl">✨</span>
-                <span class="text-[10px] mt-0.5 font-medium">Parser</span>
+                :class="currentTab === 'parser' ? 'text-neon-green' : 'text-gray-500'"
+                class="flex flex-col items-center justify-center p-1.5 min-w-[60px]">
+                <span class="text-lg">✨</span>
+                <span class="text-[9px] mt-0.5">Parser</span>
             </button>
-            <button @click="currentTab = 'market'"
-                :class="currentTab === 'market' ? 'text-cyan-400 bg-cyan-400/10' : 'text-gray-400'"
-                class="flex flex-col items-center justify-center p-2 rounded-lg transition-all">
-                <span class="text-xl">📈</span>
-                <span class="text-[10px] mt-0.5 font-medium">Mercado</span>
+            <button @click="currentTab = 'market'" :class="currentTab === 'market' ? 'text-cyan-400' : 'text-gray-500'"
+                class="flex flex-col items-center justify-center p-1.5 min-w-[60px]">
+                <span class="text-lg">📈</span>
+                <span class="text-[9px] mt-0.5">Mercado</span>
             </button>
             <button @click="currentTab = 'movements'"
-                :class="currentTab === 'movements' ? 'text-orange-400 bg-orange-400/10' : 'text-gray-400'"
-                class="flex flex-col items-center justify-center p-2 rounded-lg transition-all">
-                <span class="text-xl">📋</span>
-                <span class="text-[10px] mt-0.5 font-medium">Historial</span>
+                :class="currentTab === 'movements' ? 'text-orange-400' : 'text-gray-500'"
+                class="flex flex-col items-center justify-center p-1.5 min-w-[60px]">
+                <span class="text-lg">📋</span>
+                <span class="text-[9px] mt-0.5">Historial</span>
             </button>
             <button @click="mobileMenuOpen = !mobileMenuOpen"
-                :class="mobileMenuOpen ? 'text-yellow-400 bg-yellow-400/10' : 'text-gray-400'"
-                class="flex flex-col items-center justify-center p-2 rounded-lg transition-all relative">
-                <span class="text-xl">⋯</span>
-                <span class="text-[10px] mt-0.5 font-medium">Más</span>
-                <!-- More Menu Popup -->
-                <div x-show="mobileMenuOpen" x-cloak x-transition:enter="transition ease-out duration-200"
-                    x-transition:enter-start="opacity-0 translate-y-4"
-                    x-transition:enter-end="opacity-100 translate-y-0" @click.stop
-                    class="absolute bottom-full right-0 mb-2 w-48 glass-panel rounded-xl border border-gray-700 shadow-xl p-2 space-y-1">
-                    <button @click="currentTab = 'stats'; mobileMenuOpen = false"
-                        class="w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-800"
-                        :class="currentTab === 'stats' ? 'text-neon-pink' : 'text-gray-300'">
-                        📈 Estadísticas
-                    </button>
-                    <button @click="currentTab = 'clauses'; mobileMenuOpen = false"
-                        class="w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-800"
-                        :class="currentTab === 'clauses' ? 'text-neon-purple' : 'text-gray-300'">
-                        ⚖️ Cláusulas
-                    </button>
-                    <button @click="currentTab = 'advanced'; mobileMenuOpen = false"
-                        class="w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-800"
-                        :class="currentTab === 'advanced' ? 'text-yellow-400' : 'text-gray-300'">
-                        🚀 Métricas Avanzadas
-                    </button>
-                </div>
+                :class="mobileMenuOpen ? 'text-yellow-400' : 'text-gray-500'"
+                class="flex flex-col items-center justify-center p-1.5 min-w-[60px]">
+                <span class="text-lg">⋯</span>
+                <span class="text-[9px] mt-0.5">Más</span>
             </button>
         </div>
     </nav>
 
     <!-- Add padding at bottom for mobile nav -->
-    <div class="lg:hidden h-20"></div>
+    <div class="lg:hidden h-16"></div>
 
     <!-- LOGIC -->
     <script>
