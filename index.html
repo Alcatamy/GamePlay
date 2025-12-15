@@ -2519,17 +2519,19 @@
                     const reReward11 = /(.+?) ha ganado ([\d\.]+)[€]? por tener.+11 ideal/i;
                     const reTeamValue = /([^\n]+)\s+(\d+)\s+PFSY\s+([\d\.]+)/;
 
-                    // Función para normalizar fechas (convierte hora sola a fecha de hoy)
+                    // Función para normalizar fechas (convierte fechas relativas a absolutas)
                     const normalizeDate = (dateStr) => {
                         if (!dateStr || dateStr === 'NODATE') return 'Sin fecha';
 
+                        const today = new Date();
+                        const dd = (d) => String(d.getDate()).padStart(2, '0');
+                        const mm = (d) => String(d.getMonth() + 1).padStart(2, '0');
+                        const yyyy = (d) => d.getFullYear();
+                        const formatDate = (d) => `${dd(d)}/${mm(d)}/${yyyy(d)}`;
+
                         // Si es solo hora (ej: "20:37" o "14:30"), añadir fecha de hoy
                         if (/^\d{1,2}:\d{2}$/.test(dateStr)) {
-                            const today = new Date();
-                            const dd = String(today.getDate()).padStart(2, '0');
-                            const mm = String(today.getMonth() + 1).padStart(2, '0');
-                            const yyyy = today.getFullYear();
-                            return `${dd}/${mm}/${yyyy} ${dateStr}`;
+                            return `${formatDate(today)} ${dateStr}`;
                         }
 
                         // Si ya es fecha completa DD/MM/YYYY, devolverla tal cual
@@ -2537,7 +2539,28 @@
                             return dateStr;
                         }
 
-                        // Para otros formatos (Hace X días, Ayer, etc.) devolver como está
+                        // Convertir "Ayer" a fecha absoluta
+                        if (/^ayer$/i.test(dateStr.trim())) {
+                            const yesterday = new Date(today);
+                            yesterday.setDate(today.getDate() - 1);
+                            return formatDate(yesterday);
+                        }
+
+                        // Convertir "Hace X días" a fecha absoluta
+                        const haceDiasMatch = dateStr.match(/hace\s+(\d+)\s+d[ií]as?/i);
+                        if (haceDiasMatch) {
+                            const daysAgo = parseInt(haceDiasMatch[1]);
+                            const pastDate = new Date(today);
+                            pastDate.setDate(today.getDate() - daysAgo);
+                            return formatDate(pastDate);
+                        }
+
+                        // Convertir "Hace X horas" a fecha de hoy
+                        if (/hace\s+\d+\s+horas?/i.test(dateStr)) {
+                            return formatDate(today);
+                        }
+
+                        // Para otros formatos desconocidos, devolver como está
                         return dateStr;
                     };
 
@@ -2583,9 +2606,10 @@
                             const amount = parseInt(amountStr.replace(/\./g, ''));
                             const buyer = action === 'comprado' ? actor.trim() : otherParty.trim();
                             const seller = action === 'comprado' ? otherParty.trim() : actor.trim();
+                            const normalizedDateForId = normalizeDate(dateKey);
 
-                            // ID UNIQUE with DATE
-                            const id = `transfer_${dateKey}_${buyer}_${seller}_${player}_${amount}`;
+                            // ID UNIQUE with NORMALIZED DATE (prevents duplicates from relative dates)
+                            const id = `transfer_${normalizedDateForId}_${buyer}_${seller}_${player}_${amount}`;
 
                             // ⚡ O(1) lookup en lugar de O(n)
                             if (!pendingIds.has(id) && !existingIds.has(id)) {
@@ -2597,7 +2621,7 @@
                                     seller,
                                     player,
                                     amount,
-                                    date: normalizeDate(dateKey)
+                                    date: normalizedDateForId
                                 });
                             }
                             return;
@@ -2607,7 +2631,8 @@
                         match = textToParse.match(reShield);
                         if (match) {
                             const [_, manager, player] = match;
-                            const id = `shield_${dateKey}_${manager.trim()}_${player.trim()}`;
+                            const normalizedDateForId = normalizeDate(dateKey);
+                            const id = `shield_${normalizedDateForId}_${manager.trim()}_${player.trim()}`;
 
                             if (!pendingIds.has(id) && !existingIds.has(id)) {
                                 pendingIds.add(id);
@@ -2618,7 +2643,7 @@
                                     player: player.trim(),
                                     amount: 0,
                                     details: 'Blindaje',
-                                    date: normalizeDate(dateKey)
+                                    date: normalizedDateForId
                                 });
                             }
                             return;
@@ -2651,7 +2676,8 @@
                         if (match) {
                             const [_, beneficiary, amountStr] = match;
                             const amount = parseInt(amountStr.replace(/\./g, ''));
-                            const id = `reward_11_${beneficiary.trim()}_${dateKey}_${amount}`;
+                            const normalizedDateForId = normalizeDate(dateKey);
+                            const id = `reward_11_${beneficiary.trim()}_${normalizedDateForId}_${amount}`;
 
                             if (!pendingIds.has(id) && !existingIds.has(id)) {
                                 pendingIds.add(id);
@@ -2662,7 +2688,7 @@
                                     beneficiary: beneficiary.trim(),
                                     amount,
                                     details: '11 Ideal',
-                                    date: normalizeDate(dateKey)
+                                    date: normalizedDateForId
                                 });
                             }
                             return;
