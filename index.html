@@ -505,48 +505,163 @@
                     </div>
                 </div>
 
-                <!-- IMPORT (Magic Parser) -->
-                <div x-show="currentView === 'importar'" class="space-y-6" x-transition.opacity>
-                    <div class="glass-card p-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-lg font-bold text-white">Importador Inteligente</h2>
-                            <button @click="processInput()"
-                                class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm">
-                                <i class="fas fa-bolt mr-2"></i> Procesar
-                            </button>
-                        </div>
+            </div>
+    </div>
 
-                        <div
-                            class="mb-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg text-xs text-blue-300 flex items-center gap-2">
-                            <i class="fas fa-info-circle text-lg"></i>
-                            <div>
-                                <strong>¿Faltan datos antiguos?</strong>
-                                <p>Re-importa tu archivo <code>movimientos_smart.txt</code> pegando su contenido abajo
-                                    para restaurar todo el historial en esta nueva versión V2.0.</p>
+    <!-- INTELLIGENCE (PRO) -->
+    <div x-show="currentView === 'intelligence'" class="space-y-6" x-transition.opacity>
+        <!-- Cheat Sheet -->
+        <div class="glass-card p-6 border border-yellow-500/30">
+            <h3 class="text-xl font-bold text-yellow-400 mb-4"><i class="fas fa-lightbulb mr-2"></i>Cheat Sheet de
+                Mercado (Oportunidades)</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="text-xs uppercase text-slate-400 bg-black/20">
+                        <tr>
+                            <th class="p-3">Jugador</th>
+                            <th class="p-3 text-right">VM Hoy</th>
+                            <th class="p-3">Razón IA</th>
+                            <th class="p-3 text-right">Puja Sugerida</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-800">
+                        <template x-for="op in cheatSheet" :key="op.player">
+                            <tr class="hover:bg-slate-800/50">
+                                <td class="p-3 font-bold text-white" x-text="op.player"></td>
+                                <td class="p-3 text-right font-mono text-slate-300" x-text="formatMoney(op.vm)"></td>
+                                <td class="p-3 text-xs text-blue-300" x-text="op.reason"></td>
+                                <td class="p-3 text-right font-mono text-green-400 font-bold"
+                                    x-text="formatMoney(op.bid)"></td>
+                            </tr>
+                        </template>
+                        <tr x-show="!cheatSheet.length">
+                            <td colspan="4" class="p-4 text-center text-slate-500">No hay oportunidades claras
+                                detectadas hoy.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Manager Psychology -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="glass-card p-6">
+                <h3 class="text-lg font-bold text-purple-400 mb-4"><i class="fas fa-brain mr-2"></i>Psicología de Puja
+                    (Spread Medio)</h3>
+                <div class="space-y-4">
+                    <template x-for="psy in calculatePsychology()" :key="psy.name">
+                        <div class="bg-slate-800/50 p-3 rounded-lg">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="font-bold text-white" x-text="psy.name"></span>
+                                <span class="text-xs font-mono px-2 py-1 rounded bg-purple-900/50 text-purple-300"
+                                    x-text="'Avg Spread: ' + psy.avgSpread + '%'"></span>
+                            </div>
+                            <div class="grid grid-cols-4 gap-2 text-xs text-center">
+                                <div class="bg-slate-900/50 rounded p-1">
+                                    <div class="text-slate-500">PT</div>
+                                    <div class="text-white" x-text="(psy.posSpreads.PT || '-') + '%'"></div>
+                                </div>
+                                <div class="bg-slate-900/50 rounded p-1">
+                                    <div class="text-slate-500">DF</div>
+                                    <div class="text-white" x-text="(psy.posSpreads.DF || '-') + '%'"></div>
+                                </div>
+                                <div class="bg-slate-900/50 rounded p-1">
+                                    <div class="text-slate-500">MC</div>
+                                    <div class="text-white" x-text="(psy.posSpreads.MC || '-') + '%'"></div>
+                                </div>
+                                <div class="bg-slate-900/50 rounded p-1">
+                                    <div class="text-slate-500">DL</div>
+                                    <div class="text-white" x-text="(psy.posSpreads.DL || '-') + '%'"></div>
+                                </div>
                             </div>
                         </div>
-                        <textarea x-model="rawInput"
-                            class="w-full bg-slate-900/80 text-slate-300 p-4 rounded-lg font-mono text-xs border border-slate-700 focus:border-blue-500 outline-none h-64"
-                            placeholder="Pega aquí el HTML completo de Mercado, o las líneas de texto de Movimientos..."></textarea>
+                    </template>
+                </div>
+            </div>
 
-                        <div
-                            class="mt-4 bg-black/40 p-4 rounded-lg font-mono text-xs h-48 overflow-y-auto border border-slate-800/50">
-                            <template x-for="log in logs" :key="log.id">
-                                <div class="mb-1 border-l-2 pl-2" :class="{
+            <div class="glass-card p-6">
+                <h3 class="text-lg font-bold text-orange-400 mb-4"><i class="fas fa-map mr-2"></i>Mapa de Necesidad
+                    (Plantillas)</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-center">
+                        <thead>
+                            <tr class="text-slate-400">
+                                <th class="p-2 text-left">Manager</th>
+                                <th class="p-2">PT</th>
+                                <th class="p-2">DF</th>
+                                <th class="p-2">MC</th>
+                                <th class="p-2">DL</th>
+                                <th class="p-2">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-800">
+                            <template x-for="(needs, mgr) in calculateNeedMap()" :key="mgr">
+                                <tr>
+                                    <td class="p-2 text-left text-white font-medium" x-text="mgr"></td>
+                                    <td class="p-2"
+                                        :class="needs.PT < 1 ? 'text-red-500 font-bold bg-red-900/10' : 'text-slate-300'"
+                                        x-text="needs.PT"></td>
+                                    <td class="p-2"
+                                        :class="needs.DF < 4 ? 'text-red-500 font-bold bg-red-900/10' : 'text-slate-300'"
+                                        x-text="needs.DF"></td>
+                                    <td class="p-2"
+                                        :class="needs.MC < 4 ? 'text-red-500 font-bold bg-red-900/10' : 'text-slate-300'"
+                                        x-text="needs.MC"></td>
+                                    <td class="p-2"
+                                        :class="needs.DL < 2 ? 'text-red-500 font-bold bg-red-900/10' : 'text-slate-300'"
+                                        x-text="needs.DL"></td>
+                                    <td class="p-2 text-slate-500" x-text="needs.total"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- IMPORT (Magic Parser) -->
+    <div x-show="currentView === 'importar'" class="space-y-6" x-transition.opacity>
+        <div class="glass-card p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-lg font-bold text-white">Importador Inteligente</h2>
+                <button @click="processInput()"
+                    class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm">
+                    <i class="fas fa-bolt mr-2"></i> Procesar
+                </button>
+            </div>
+
+            <div
+                class="mb-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg text-xs text-blue-300 flex items-center gap-2">
+                <i class="fas fa-info-circle text-lg"></i>
+                <div>
+                    <strong>¿Faltan datos antiguos?</strong>
+                    <p>Re-importa tu archivo <code>movimientos_smart.txt</code> pegando su contenido abajo
+                        para restaurar todo el historial en esta nueva versión V2.0.</p>
+                </div>
+            </div>
+            <textarea x-model="rawInput"
+                class="w-full bg-slate-900/80 text-slate-300 p-4 rounded-lg font-mono text-xs border border-slate-700 focus:border-blue-500 outline-none h-64"
+                placeholder="Pega aquí el HTML completo de Mercado, o las líneas de texto de Movimientos..."></textarea>
+
+            <div
+                class="mt-4 bg-black/40 p-4 rounded-lg font-mono text-xs h-48 overflow-y-auto border border-slate-800/50">
+                <template x-for="log in logs" :key="log.id">
+                    <div class="mb-1 border-l-2 pl-2" :class="{
                                     'border-green-500 text-green-400': log.type === 'success',
                                     'border-red-500 text-red-400': log.type === 'error',
                                     'border-yellow-500 text-yellow-300': log.type === 'warning',
                                     'border-blue-500 text-slate-400': log.type === 'info'
                                 }">
-                                    <span x-text="log.message"></span>
-                                </div>
-                            </template>
-                        </div>
+                        <span x-text="log.message"></span>
                     </div>
-                </div>
-
+                </template>
             </div>
-        </main>
+        </div>
+    </div>
+
+    </div>
+    </main>
     </div>
 
     <script>
@@ -560,6 +675,7 @@
                     { id: 'jugadores', label: 'Mercado & Jugadores', icon: 'fas fa-users' },
                     { id: 'movimientos', label: 'Movimientos', icon: 'fas fa-exchange-alt' },
                     { id: 'negocios', label: 'Negocios', icon: 'fas fa-briefcase' },
+                    { id: 'intelligence', label: 'Inteligencia 🧠', icon: 'fas fa-brain' },
                     { id: 'importar', label: 'Importar / Config', icon: 'fas fa-cogs' }
                 ],
 
@@ -575,6 +691,7 @@
                 pendingMovements: [],
                 marketData: typeof MARKET_DATA !== 'undefined' ? MARKET_DATA : {},
                 marketTrends: typeof MARKET_TRENDS !== 'undefined' ? MARKET_TRENDS : {},
+                marketInfo: typeof MARKET_INFO !== 'undefined' ? MARKET_INFO : {},
                 logs: [],
 
                 tradingHistory: { closedDeals: [], rosters: {}, managerStats: {} },
@@ -835,6 +952,120 @@
                     });
                     // Sort by Total Activity
                     return Object.entries(result).sort((a, b) => b[1].total - a[1].total).reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {});
+                },
+
+                calculatePsychology() {
+                    const stats = {};
+                    Object.keys(this.managers).forEach(m => stats[m] = {
+                        spread: { total: 0, count: 0, pos: {} },
+                        holding: [],
+                        weakHand: 0
+                    });
+
+                    // 1. Holding Period & Spread
+                    const playerAcqDate = {};
+
+                    this.movements.slice().reverse().forEach(m => { // Chronological
+                        if (m.type === 'transfer') {
+                            const date = this.parseDate(m.date);
+
+                            // Buyer Logic (Acquisition)
+                            playerAcqDate[m.player] = date;
+
+                            // Seller Logic (Retention)
+                            if (m.seller !== 'Mercado' && stats[m.seller]) {
+                                // Calculate Holding
+                                // We need when seller bought this player. 
+                                // Simplified: if we tracked it.
+                                // Complex: We need full tracing. Logic already exists in rosters? 
+                                // Let's use simpleheuristic: if we moved it before?
+                                // Improved: Use roster tracking.
+                            }
+
+                            // Spread Logic (Psychology)
+                            if (m.buyer !== 'Mercado' && stats[m.buyer]) {
+                                const val = this.marketData[m.player] || 0; // WARNING: Current Value Proxy
+                                if (val > 0) {
+                                    const spread = ((m.amount - val) / val) * 100;
+                                    stats[m.buyer].spread.total += spread;
+                                    stats[m.buyer].spread.count++;
+
+                                    // Segment by Position
+                                    const pos = this.marketInfo[m.player]?.position || 'UNK';
+                                    if (!stats[m.buyer].spread.pos[pos]) stats[m.buyer].spread.pos[pos] = { sum: 0, count: 0 };
+                                    stats[m.buyer].spread.pos[pos].sum += spread;
+                                    stats[m.buyer].spread.pos[pos].count++;
+                                }
+                            }
+                        }
+                    });
+
+                    return Object.keys(stats).map(name => {
+                        const s = stats[name];
+                        const avgSpread = s.spread.count ? (s.spread.total / s.spread.count) : 0;
+                        const posSpreads = {};
+                        Object.keys(s.spread.pos).forEach(p => {
+                            posSpreads[p] = (s.spread.pos[p].sum / s.spread.pos[p].count).toFixed(1);
+                        });
+
+                        return {
+                            name,
+                            avgSpread: avgSpread.toFixed(1),
+                            posSpreads
+                        };
+                    });
+                },
+
+                get cheatSheet() {
+                    // Logic: Analyze trends, overbids, and needs
+                    const opportunities = [];
+                    const psychology = this.calculatePsychology();
+
+                    // Simple Strategy: Free players with high value or trend
+                    this.filteredPlayers.forEach(p => {
+                        if (!p.owner) { // Free
+                            // Rule 1: Rising Star
+                            if (p.trendPct > 2) {
+                                opportunities.push({
+                                    player: p.name,
+                                    vm: p.value,
+                                    reason: 'Subida fuerte (' + p.trendPct + '%). Especulación.',
+                                    bid: p.value * 1.05 // +5%
+                                });
+                            }
+                            // Rule 2: Top Value available
+                            else if (p.value > 10000000) {
+                                opportunities.push({
+                                    player: p.name,
+                                    vm: p.value,
+                                    reason: 'Crack libre. Pujar fuerte.',
+                                    bid: p.value * 1.15 // +15% default
+                                });
+                            }
+                        }
+                    });
+
+                    return opportunities.sort((a, b) => b.vm - a.vm).slice(0, 10);
+                },
+
+                calculateNeedMap() {
+                    if (!Object.keys(this.tradingHistory.rosters).length) this.reconstructTradingHistory();
+                    const map = {};
+
+                    Object.keys(this.tradingHistory.rosters).forEach(mgr => {
+                        map[mgr] = { DL: 0, MC: 0, DF: 0, PT: 0, total: 0 };
+                        Object.keys(this.tradingHistory.rosters[mgr]).forEach(pName => {
+                            const pos = this.marketInfo[pName]?.position; // Need match
+                            if (pos) {
+                                if (pos.includes('DL')) map[mgr].DL++;
+                                else if (pos.includes('MC')) map[mgr].MC++;
+                                else if (pos.includes('DF')) map[mgr].DF++;
+                                else if (pos.includes('PT')) map[mgr].PT++; // Analitica uses PT? Check scrap
+                            }
+                            map[mgr].total++;
+                        });
+                    });
+                    return map;
                 },
 
                 // ROBUST PARSERS (FROM v1)
