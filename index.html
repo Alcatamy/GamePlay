@@ -103,38 +103,100 @@
     <nav class="sticky top-0 z-50 glass-panel border-b border-gray-800">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-3">
+                <!-- Logo -->
+                <div class="flex items-center gap-2 sm:gap-3">
                     <div
                         class="w-8 h-8 rounded bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center font-bold text-black text-xs">
                         GP</div>
                     <span
-                        class="font-bold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-neon-blue to-neon-purple animate-gradient-x">GamePlay
-                        Manager</span>
+                        class="font-bold text-lg sm:text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-neon-blue to-neon-purple">GamePlay</span>
                     <span
-                        class="ml-2 px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 text-[10px] tracking-widest font-bold border border-yellow-500/30 uppercase shadow-[0_0_10px_rgba(234,179,8,0.2)]">Premium</span>
+                        class="hidden sm:inline ml-1 px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 text-[10px] tracking-widest font-bold border border-yellow-500/30 uppercase">Premium</span>
                 </div>
-                <div class="flex space-x-4">
+
+                <!-- Desktop Navigation -->
+                <div class="hidden lg:flex space-x-3 xl:space-x-4">
                     <button @click="currentTab = 'dashboard'" :class="{'text-neon-blue': currentTab === 'dashboard'}"
-                        class="hover:text-white transition-colors text-sm font-medium">Dashboard</button>
+                        class="hover:text-white transition-colors text-sm font-medium px-2 py-1">Dashboard</button>
                     <button @click="currentTab = 'parser'" :class="{'text-neon-green': currentTab === 'parser'}"
-                        class="hover:text-white transition-colors text-sm font-medium">Magic Parser</button>
+                        class="hover:text-white transition-colors text-sm font-medium px-2 py-1">Parser</button>
                     <button @click="currentTab = 'stats'" :class="{'text-neon-pink': currentTab === 'stats'}"
-                        class="hover:text-white transition-colors text-sm font-medium">Estadísticas</button>
+                        class="hover:text-white transition-colors text-sm font-medium px-2 py-1">Stats</button>
                     <button @click="currentTab = 'clauses'" :class="{'text-neon-purple': currentTab === 'clauses'}"
-                        class="hover:text-white transition-colors text-sm font-medium">Cláusulas</button>
+                        class="hover:text-white transition-colors text-sm font-medium px-2 py-1">Cláusulas</button>
                     <button @click="currentTab = 'market'" :class="{'text-cyan-400': currentTab === 'market'}"
-                        class="hover:text-white transition-colors text-sm font-medium flex items-center gap-1">
+                        class="hover:text-white transition-colors text-sm font-medium px-2 py-1 flex items-center gap-1">
                         <span>📈</span> Mercado
                     </button>
                     <button @click="currentTab = 'movements'" :class="{'text-orange-400': currentTab === 'movements'}"
-                        class="hover:text-white transition-colors text-sm font-medium flex items-center gap-1">
+                        class="hover:text-white transition-colors text-sm font-medium px-2 py-1 flex items-center gap-1">
                         <span>📋</span> Historial
                     </button>
                     <button @click="currentTab = 'advanced'" :class="{'text-yellow-400': currentTab === 'advanced'}"
-                        class="hover:text-white transition-colors text-sm font-medium flex items-center gap-1">
-                        <span>🚀</span> Métricas Avanzadas
+                        class="hover:text-white transition-colors text-sm font-medium px-2 py-1 flex items-center gap-1">
+                        <span>🚀</span> Métricas
                     </button>
                 </div>
+
+                <!-- Mobile Menu Button -->
+                <button @click="mobileMenuOpen = !mobileMenuOpen"
+                    class="lg:hidden p-2 rounded-lg hover:bg-gray-800 transition-colors">
+                    <svg x-show="!mobileMenuOpen" class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                    <svg x-show="mobileMenuOpen" x-cloak class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mobile Menu Dropdown -->
+        <div x-show="mobileMenuOpen" x-cloak x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0"
+            x-transition:leave-end="opacity-0 -translate-y-2"
+            class="lg:hidden border-t border-gray-800 bg-gray-900/95 backdrop-blur-xl">
+            <div class="grid grid-cols-2 gap-1 p-3">
+                <button @click="currentTab = 'dashboard'; mobileMenuOpen = false"
+                    :class="currentTab === 'dashboard' ? 'bg-neon-blue/20 text-neon-blue border-neon-blue' : 'bg-gray-800/50 text-gray-300 border-transparent'"
+                    class="p-3 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2">
+                    📊 Dashboard
+                </button>
+                <button @click="currentTab = 'parser'; mobileMenuOpen = false"
+                    :class="currentTab === 'parser' ? 'bg-neon-green/20 text-neon-green border-neon-green' : 'bg-gray-800/50 text-gray-300 border-transparent'"
+                    class="p-3 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2">
+                    ✨ Parser
+                </button>
+                <button @click="currentTab = 'stats'; mobileMenuOpen = false"
+                    :class="currentTab === 'stats' ? 'bg-neon-pink/20 text-neon-pink border-neon-pink' : 'bg-gray-800/50 text-gray-300 border-transparent'"
+                    class="p-3 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2">
+                    📈 Stats
+                </button>
+                <button @click="currentTab = 'clauses'; mobileMenuOpen = false"
+                    :class="currentTab === 'clauses' ? 'bg-neon-purple/20 text-neon-purple border-neon-purple' : 'bg-gray-800/50 text-gray-300 border-transparent'"
+                    class="p-3 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2">
+                    ⚖️ Cláusulas
+                </button>
+                <button @click="currentTab = 'market'; mobileMenuOpen = false"
+                    :class="currentTab === 'market' ? 'bg-cyan-400/20 text-cyan-400 border-cyan-400' : 'bg-gray-800/50 text-gray-300 border-transparent'"
+                    class="p-3 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2">
+                    📈 Mercado
+                </button>
+                <button @click="currentTab = 'movements'; mobileMenuOpen = false"
+                    :class="currentTab === 'movements' ? 'bg-orange-400/20 text-orange-400 border-orange-400' : 'bg-gray-800/50 text-gray-300 border-transparent'"
+                    class="p-3 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2">
+                    📋 Historial
+                </button>
+                <button @click="currentTab = 'advanced'; mobileMenuOpen = false"
+                    :class="currentTab === 'advanced' ? 'bg-yellow-400/20 text-yellow-400 border-yellow-400' : 'bg-gray-800/50 text-gray-300 border-transparent'"
+                    class="col-span-2 p-3 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2">
+                    🚀 Métricas Avanzadas
+                </button>
             </div>
         </div>
     </nav>
@@ -1389,6 +1451,7 @@
         function gamePlayApp() {
             return {
                 currentTab: 'dashboard',
+                mobileMenuOpen: false,
                 rawInput: '',
                 clauseBulkInput: '',
                 clauseForm: { manager: '', amount: '' },
