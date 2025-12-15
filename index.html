@@ -134,7 +134,8 @@
                         <div class="glass-card p-6 flex flex-col relative overflow-hidden group">
                             <div
                                 class="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                <i class="fas fa-money-bill-wave text-6xl text-green-500"></i></div>
+                                <i class="fas fa-money-bill-wave text-6xl text-green-500"></i>
+                            </div>
                             <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Volumen
                                 Negociado</span>
                             <span class="text-2xl font-bold text-white mt-1"
@@ -143,7 +144,8 @@
                         <div class="glass-card p-6 flex flex-col relative overflow-hidden group">
                             <div
                                 class="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                <i class="fas fa-users text-6xl text-blue-500"></i></div>
+                                <i class="fas fa-users text-6xl text-blue-500"></i>
+                            </div>
                             <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Managers</span>
                             <span class="text-2xl font-bold text-white mt-1"
                                 x-text="Object.keys(managers).length"></span>
@@ -151,7 +153,8 @@
                         <div class="glass-card p-6 flex flex-col relative overflow-hidden group">
                             <div
                                 class="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                <i class="fas fa-chart-line text-6xl text-purple-500"></i></div>
+                                <i class="fas fa-chart-line text-6xl text-purple-500"></i>
+                            </div>
                             <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Mercado
                                 (Jugadores)</span>
                             <span class="text-2xl font-bold text-white mt-1"
@@ -162,7 +165,8 @@
                         <div class="glass-card p-6 flex flex-col relative overflow-hidden group">
                             <div
                                 class="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
-                                <i class="fas fa-trophy text-6xl text-yellow-500"></i></div>
+                                <i class="fas fa-trophy text-6xl text-yellow-500"></i>
+                            </div>
                             <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Líder
                                 (Patrimonio)</span>
                             <span class="text-xl font-bold text-white mt-1 truncate"
@@ -282,7 +286,7 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-800">
-                                <template x-for="p in filteredPlayers.slice(0, 150)" :key="p.name">
+                                <template x-for="p in filteredPlayers.slice(0, 5000)" :key="p.name">
                                     <tr class="hover:bg-slate-800/50 transition-colors">
                                         <td class="p-4 font-medium text-white" x-text="p.name"></td>
                                         <td class="p-4">
@@ -304,7 +308,7 @@
                             </tbody>
                         </table>
                         <div class="p-4 text-center text-slate-600 text-xs">Mostrando <span
-                                x-text="Math.min(150, filteredPlayers.length)"></span> de <span
+                                x-text="Math.min(5000, filteredPlayers.length)"></span> de <span
                                 x-text="filteredPlayers.length"></span> jugadores</div>
                     </div>
                 </div>
@@ -344,7 +348,7 @@
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-800">
-                                <template x-for="m in filteredMovements.slice(0, 200)" :key="m.id">
+                                <template x-for="m in filteredMovements.slice(0, 5000)" :key="m.id">
                                     <tr class="hover:bg-slate-800/50">
                                         <td class="p-3 text-slate-400 text-xs whitespace-nowrap" x-text="m.date"></td>
                                         <td class="p-3">
@@ -379,7 +383,7 @@
                             <h3 class="text-lg font-bold text-green-400 mb-4"><i
                                     class="fas fa-chart-line mr-2"></i>Mejores "Flips" (Profit)</h3>
                             <div class="space-y-3">
-                                <template x-for="(deal, i) in bestDeals.slice(0,10)" :key="i">
+                                <template x-for="(deal, i) in bestDeals.slice(0,50)" :key="i">
                                     <div
                                         class="flex items-center justify-between p-3 bg-slate-800/40 rounded-lg border border-slate-700/50 hover:bg-slate-800 transition-colors">
                                         <div class="flex items-center gap-3">
@@ -405,7 +409,7 @@
                             <h3 class="text-lg font-bold text-red-400 mb-4"><i
                                     class="fas fa-level-down-alt mr-2"></i>Peores "Ruinas" (Loss)</h3>
                             <div class="space-y-3">
-                                <template x-for="(deal, i) in worstDeals.slice(0,10)" :key="i">
+                                <template x-for="(deal, i) in worstDeals.slice(0,50)" :key="i">
                                     <div
                                         class="flex items-center justify-between p-3 bg-slate-800/40 rounded-lg border border-slate-700/50 hover:bg-slate-800 transition-colors">
                                         <div class="flex items-center gap-3">
@@ -437,6 +441,16 @@
                                 class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm">
                                 <i class="fas fa-bolt mr-2"></i> Procesar
                             </button>
+                        </div>
+
+                        <div
+                            class="mb-4 p-3 bg-blue-900/20 border border-blue-500/30 rounded-lg text-xs text-blue-300 flex items-center gap-2">
+                            <i class="fas fa-info-circle text-lg"></i>
+                            <div>
+                                <strong>¿Faltan datos antiguos?</strong>
+                                <p>Re-importa tu archivo <code>movimientos_smart.txt</code> pegando su contenido abajo
+                                    para restaurar todo el historial en esta nueva versión V2.0.</p>
+                            </div>
                         </div>
                         <textarea x-model="rawInput"
                             class="w-full bg-slate-900/80 text-slate-300 p-4 rounded-lg font-mono text-xs border border-slate-700 focus:border-blue-500 outline-none h-64"
