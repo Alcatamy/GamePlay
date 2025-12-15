@@ -2433,6 +2433,51 @@
                     if (count > 0) this.addLog(`Mercado actualizado (Regex): ${count} jugadores.`, 'success');
                 },
 
+                // Parse team values from PFSY format
+                parseTeamValues(text) {
+                    const managerNames = Object.keys(this.managers);
+                    let updatedCount = 0;
+
+                    // Clean and split text
+                    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+
+                    // Find each manager and extract their team value
+                    managerNames.forEach(managerName => {
+                        // Find the line with this manager (partial match)
+                        const managerIdx = lines.findIndex(l =>
+                            managerName.toLowerCase().includes(l.toLowerCase()) ||
+                            l.toLowerCase().includes(managerName.split(' ')[0].toLowerCase())
+                        );
+
+                        if (managerIdx === -1) return;
+
+                        // Look for a value in nearby lines (within next 5 lines)
+                        for (let i = managerIdx; i < Math.min(managerIdx + 6, lines.length); i++) {
+                            const line = lines[i];
+                            // Look for large numbers (team values are 100M+)
+                            // Format: 654.648.354 or 654,648,354 or just digits
+                            const valueMatch = line.match(/^[\d€\s\.,]+$/);
+                            if (valueMatch) {
+                                const cleanValue = line.replace(/[€\s\.]/g, '').replace(',', '.');
+                                const value = parseInt(cleanValue);
+                                if (value > 10000000) { // More than 10M = likely team value
+                                    this.managers[managerName].teamValue = value;
+                                    updatedCount++;
+                                    break;
+                                }
+                            }
+                        }
+                    });
+
+                    if (updatedCount > 0) {
+                        this.addLog(`✅ Valores de equipo actualizados: ${updatedCount} managers`, 'success');
+                        this.saveData();
+                        this.rawInput = '';
+                    } else {
+                        this.addLog('⚠️ No se encontraron valores de equipo válidos', 'warning');
+                    }
+                },
+
                 processInput() {
                     const text = this.rawInput;
                     if (!text.trim()) return;
@@ -2443,6 +2488,13 @@
                     // ⚡ DETECCIÓN HTML (Mercado)
                     if (text.includes('<html') || text.includes('MuiTypography') || text.includes('__NEXT_DATA__')) {
                         this.parseMarketData(text);
+                        return;
+                    }
+
+                    // ⚡ DETECCIÓN VALORES DE EQUIPO (formato PFSY)
+                    // Formato: TeamName\nRank\nScore PFSY\n[€]\nValue
+                    if (text.includes('PFSY') && (text.includes('Alcatamy') || text.includes('Vigar') || text.includes('GOLENCIERRO') || text.includes('Pablinistan') || text.includes('Morenazos') || text.includes('Manga'))) {
+                        this.parseTeamValues(text);
                         return;
                     }
 
