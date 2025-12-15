@@ -1108,6 +1108,10 @@
                     const startTime = performance.now();
 
                     // HTML Detection
+                    if (text.includes('comuniate') || text.includes('ficha_jugador') || text.includes('label-posicion')) {
+                        this.parseComuniateData(text);
+                        return;
+                    }
                     if (text.includes('<html') || text.includes('MuiTypography') || text.includes('__NEXT_DATA__')) {
                         this.parseMarketDataRegex(text); // Use Regex fallback for reliability
                         return;
@@ -1185,6 +1189,76 @@
 
                     if (this.pendingMovements.length > 0) this.addLog(`Detectados ${this.pendingMovements.length} movimientos.`, 'info');
                     else this.addLog('No se detectaron movimientos.', 'warning');
+                },
+
+                parseComuniateData(text) {
+                    // Create a dummy DOM to parse HTML string
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(text, 'text/html');
+                    const cards = doc.querySelectorAll('.ficha_jugador');
+                    let count = 0;
+
+                    cards.forEach(card => {
+                        // Name
+                        let name = "Unknown";
+                        const nameEl = card.querySelector('.titulo_ficha_jugador');
+                        if (nameEl) name = nameEl.textContent.trim();
+                        else {
+                            // Fallback
+                            const lines = card.textContent.split('\n');
+                            for (let line of lines) {
+                                line = line.trim();
+                                if (line.length > 3 && !line.includes('€') && !['PT', 'DF', 'MD', 'MC', 'DL'].some(p => line.includes(p))) {
+                                    name = line;
+                                    break;
+                                }
+                            }
+                        }
+
+                        // Position & Points
+                        let pos = "UNK";
+                        let points = 0;
+                        const badges = card.querySelectorAll('.label-posicion');
+                        badges.forEach(b => {
+                            const txt = b.textContent.trim().toUpperCase();
+                            if (['PT', 'DF', 'MD', 'MC', 'DL', 'CEN'].includes(txt)) pos = txt;
+                            else if (!isNaN(parseInt(txt)) || (txt.startsWith('-') && !isNaN(parseInt(txt.substring(1))))) {
+                                points = parseInt(txt);
+                            }
+                        });
+
+                        // Price
+                        let price = 0;
+                        const content = card.textContent;
+                        const moneyMatch = content.match(/([\d\.]+)€/);
+                        if (moneyMatch) {
+                            price = parseInt(moneyMatch[1].replace(/\./g, ''));
+                        }
+
+                        // Trend (Optional but cool if present)
+                        const trendEl = card.querySelector('.success, .danger');
+                        let trend = 0;
+                        if (trendEl) {
+                            try {
+                                trend = parseInt(trendEl.textContent.replace(/\./g, '').replace('€', '').replace('+', '').trim());
+                            } catch (e) { }
+                        }
+
+                        if (name !== 'Unknown' && price > 0) {
+                            this.marketData[name] = price;
+                            this.marketInfo[name] = { position: pos, points: points, value: price }; // Rich Update
+
+                            // Calc Trend Pct
+                            let pct = 0;
+                            if ((price - trend) > 0) pct = (trend / (price - trend)) * 100;
+                            this.marketTrends[name] = { trend: trend, trendPct: parseFloat(pct.toFixed(1)) };
+
+                            count++;
+                        }
+                    });
+
+                    this.addLog(`Comuniate Parse: ${count} jugadores actualizados.`, 'success');
+                    this.debouncedSaveData();
                 },
 
                 parseMarketDataRegex(text) {
