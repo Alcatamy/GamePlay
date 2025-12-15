@@ -5,6 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GamePlay Manager | Fantasy League</title>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -120,6 +122,14 @@
                         class="hover:text-white transition-colors text-sm font-medium">Estadísticas</button>
                     <button @click="currentTab = 'clauses'" :class="{'text-neon-purple': currentTab === 'clauses'}"
                         class="hover:text-white transition-colors text-sm font-medium">Cláusulas</button>
+                    <button @click="currentTab = 'market'" :class="{'text-cyan-400': currentTab === 'market'}"
+                        class="hover:text-white transition-colors text-sm font-medium flex items-center gap-1">
+                        <span>📈</span> Mercado
+                    </button>
+                    <button @click="currentTab = 'movements'" :class="{'text-orange-400': currentTab === 'movements'}"
+                        class="hover:text-white transition-colors text-sm font-medium flex items-center gap-1">
+                        <span>📋</span> Historial
+                    </button>
                     <button @click="currentTab = 'advanced'" :class="{'text-yellow-400': currentTab === 'advanced'}"
                         class="hover:text-white transition-colors text-sm font-medium flex items-center gap-1">
                         <span>🚀</span> Métricas Avanzadas
@@ -942,6 +952,412 @@
 
         </div>
 
+        <!-- =============== MARKET EXPLORER TAB =============== -->
+        <div x-show="currentTab === 'market'" x-cloak class="space-y-6">
+            <h2 class="text-2xl font-bold text-cyan-400 flex items-center gap-2">
+                📈 Explorador de Mercado
+                <span class="text-sm font-normal text-gray-400"
+                    x-text="'(' + Object.keys(marketData).length + ' jugadores)'"></span>
+            </h2>
+
+            <!-- Filters & Sorting -->
+            <div class="glass-panel p-4 rounded-xl">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Buscar Jugador</label>
+                        <input type="text" x-model="marketExplorer.searchQuery" placeholder="Nombre..."
+                            class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-white text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Posición</label>
+                        <select x-model="marketExplorer.positionFilter"
+                            class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-white text-sm">
+                            <option value="all">Todas</option>
+                            <option value="PT">🧤 Portero</option>
+                            <option value="DF">🛡️ Defensa</option>
+                            <option value="MD">⚡ Mediocampista</option>
+                            <option value="DL">⚽ Delantero</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Ordenar por</label>
+                        <select x-model="marketExplorer.sortBy"
+                            class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-white text-sm">
+                            <option value="value">Valor de Mercado</option>
+                            <option value="points">Puntos Totales</option>
+                            <option value="trend">Cambio Diario (€)</option>
+                            <option value="trendPct">Cambio Diario (%)</option>
+                            <option value="ppm">Puntos por Millón</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Dirección</label>
+                        <select x-model="marketExplorer.sortDir"
+                            class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-white text-sm">
+                            <option value="desc">↓ Mayor a Menor</option>
+                            <option value="asc">↑ Menor a Mayor</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Market KPIs -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="glass-panel p-4 rounded-xl text-center">
+                    <p class="text-xs text-gray-400">🔥 Mayor Subida Hoy</p>
+                    <p class="font-bold text-green-400 text-sm mt-1" x-text="(() => {
+                        if (typeof MARKET_TRENDS === 'undefined') return '-';
+                        const sorted = Object.entries(MARKET_TRENDS).sort((a,b) => (b[1]?.trendPct || 0) - (a[1]?.trendPct || 0));
+                        return sorted[0] ? sorted[0][0] + ' (+' + sorted[0][1]?.trendPct?.toFixed(1) + '%)' : '-';
+                    })()"></p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl text-center">
+                    <p class="text-xs text-gray-400">📉 Mayor Bajada Hoy</p>
+                    <p class="font-bold text-red-400 text-sm mt-1" x-text="(() => {
+                        if (typeof MARKET_TRENDS === 'undefined') return '-';
+                        const sorted = Object.entries(MARKET_TRENDS).sort((a,b) => (a[1]?.trendPct || 0) - (b[1]?.trendPct || 0));
+                        return sorted[0] ? sorted[0][0] + ' (' + sorted[0][1]?.trendPct?.toFixed(1) + '%)' : '-';
+                    })()"></p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl text-center">
+                    <p class="text-xs text-gray-400">💎 Más Valioso</p>
+                    <p class="font-bold text-yellow-400 text-sm mt-1" x-text="(() => {
+                        const sorted = Object.entries(marketData).sort((a,b) => b[1] - a[1]);
+                        return sorted[0] ? sorted[0][0] : '-';
+                    })()"></p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl text-center">
+                    <p class="text-xs text-gray-400">⭐ Mejor PPM</p>
+                    <p class="font-bold text-purple-400 text-sm mt-1" x-text="(() => {
+                        if (typeof MARKET_INFO === 'undefined') return '-';
+                        const ppm = Object.entries(MARKET_INFO).map(([name, info]) => ({
+                            name, ppm: (info.points || 0) / ((marketData[name] || 1) / 1000000)
+                        })).sort((a,b) => b.ppm - a.ppm);
+                        return ppm[0] ? ppm[0].name + ' (' + ppm[0].ppm.toFixed(2) + ')' : '-';
+                    })()"></p>
+                </div>
+            </div>
+
+            <!-- Players Table -->
+            <div class="glass-panel p-4 rounded-xl overflow-x-auto max-h-[600px] overflow-y-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="sticky top-0 bg-gray-900 z-10">
+                        <tr class="text-gray-400 text-xs uppercase">
+                            <th class="px-3 py-2">#</th>
+                            <th class="px-3 py-2">Jugador</th>
+                            <th class="px-3 py-2 text-center">Pos</th>
+                            <th class="px-3 py-2 text-right">Valor</th>
+                            <th class="px-3 py-2 text-right">Pts</th>
+                            <th class="px-3 py-2 text-right">PPM</th>
+                            <th class="px-3 py-2 text-right">Cambio €</th>
+                            <th class="px-3 py-2 text-right">Cambio %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="(player, idx) in (() => {
+                            let players = Object.entries(marketData).map(([name, value]) => ({
+                                name, value,
+                                position: (typeof MARKET_INFO !== 'undefined' && MARKET_INFO[name]?.position) || '?',
+                                points: (typeof MARKET_INFO !== 'undefined' && MARKET_INFO[name]?.points) || 0,
+                                trend: (typeof MARKET_TRENDS !== 'undefined' && MARKET_TRENDS[name]?.trend) || 0,
+                                trendPct: (typeof MARKET_TRENDS !== 'undefined' && MARKET_TRENDS[name]?.trendPct) || 0,
+                                ppm: ((typeof MARKET_INFO !== 'undefined' && MARKET_INFO[name]?.points) || 0) / (value / 1000000)
+                            }));
+                            
+                            // Filter by search
+                            if (marketExplorer.searchQuery) {
+                                players = players.filter(p => p.name.toLowerCase().includes(marketExplorer.searchQuery.toLowerCase()));
+                            }
+                            // Filter by position
+                            if (marketExplorer.positionFilter !== 'all') {
+                                players = players.filter(p => p.position === marketExplorer.positionFilter);
+                            }
+                            // Sort
+                            const sortKey = marketExplorer.sortBy;
+                            players.sort((a, b) => marketExplorer.sortDir === 'desc' ? b[sortKey] - a[sortKey] : a[sortKey] - b[sortKey]);
+                            return players.slice(0, 100);
+                        })()" :key="player.name">
+                            <tr class="border-b border-gray-800 hover:bg-gray-800/50">
+                                <td class="px-3 py-2 text-gray-500" x-text="idx + 1"></td>
+                                <td class="px-3 py-2 font-medium text-white" x-text="player.name"></td>
+                                <td class="px-3 py-2 text-center">
+                                    <span class="px-2 py-0.5 rounded text-xs font-bold"
+                                        :class="{'bg-yellow-500/20 text-yellow-400': player.position === 'PT', 'bg-blue-500/20 text-blue-400': player.position === 'DF', 'bg-green-500/20 text-green-400': player.position === 'MD', 'bg-red-500/20 text-red-400': player.position === 'DL'}"
+                                        x-text="player.position"></span>
+                                </td>
+                                <td class="px-3 py-2 text-right font-mono text-gray-300"
+                                    x-text="formatMoney(player.value)"></td>
+                                <td class="px-3 py-2 text-right font-bold text-cyan-400" x-text="player.points"></td>
+                                <td class="px-3 py-2 text-right font-mono text-purple-400"
+                                    x-text="player.ppm.toFixed(2)"></td>
+                                <td class="px-3 py-2 text-right font-mono"
+                                    :class="player.trend > 0 ? 'text-green-400' : player.trend < 0 ? 'text-red-400' : 'text-gray-500'"
+                                    x-text="(player.trend > 0 ? '+' : '') + formatMoney(player.trend)"></td>
+                                <td class="px-3 py-2 text-right font-mono"
+                                    :class="player.trendPct > 0 ? 'text-green-400' : player.trendPct < 0 ? 'text-red-400' : 'text-gray-500'"
+                                    x-text="(player.trendPct > 0 ? '▲ +' : player.trendPct < 0 ? '▼ ' : '') + player.trendPct.toFixed(2) + '%'">
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- =============== MOVEMENTS HISTORY TAB =============== -->
+        <div x-show="currentTab === 'movements'" x-cloak class="space-y-6">
+            <h2 class="text-2xl font-bold text-orange-400 flex items-center gap-2">
+                📋 Historial de Movimientos
+                <span class="text-sm font-normal text-gray-400"
+                    x-text="'(' + movements.length + ' operaciones)'"></span>
+            </h2>
+
+            <!-- Movement KPIs -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                <div class="glass-panel p-4 rounded-xl text-center">
+                    <p class="text-xs text-gray-400">💰 Volumen Total</p>
+                    <p class="font-bold text-xl text-green-400"
+                        x-text="formatMoney(movements.filter(m => m.type === 'transfer').reduce((sum, m) => sum + m.amount, 0))">
+                    </p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl text-center">
+                    <p class="text-xs text-gray-400">📊 Media por Fichaje</p>
+                    <p class="font-bold text-xl text-cyan-400" x-text="(() => {
+                        const transfers = movements.filter(m => m.type === 'transfer');
+                        return transfers.length ? formatMoney(transfers.reduce((s, m) => s + m.amount, 0) / transfers.length) : '-';
+                    })()"></p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl text-center">
+                    <p class="text-xs text-gray-400">🏆 Fichaje más Caro</p>
+                    <p class="font-bold text-sm text-yellow-400" x-text="(() => {
+                        const transfers = movements.filter(m => m.type === 'transfer').sort((a,b) => b.amount - a.amount);
+                        return transfers[0] ? transfers[0].player + ' (' + formatMoney(transfers[0].amount) + ')' : '-';
+                    })()"></p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl text-center">
+                    <p class="text-xs text-gray-400">👤 Manager Más Activo</p>
+                    <p class="font-bold text-sm text-purple-400" x-text="(() => {
+                        const counts = {};
+                        movements.filter(m => m.type === 'transfer').forEach(m => {
+                            counts[m.buyer] = (counts[m.buyer] || 0) + 1;
+                        });
+                        const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+                        return sorted[0] ? sorted[0][0] + ' (' + sorted[0][1] + ')' : '-';
+                    })()"></p>
+                </div>
+                <div class="glass-panel p-4 rounded-xl text-center">
+                    <p class="text-xs text-gray-400">⚽ Jugador Más Traspasado</p>
+                    <p class="font-bold text-sm text-pink-400" x-text="(() => {
+                        const counts = {};
+                        movements.filter(m => m.type === 'transfer').forEach(m => {
+                            counts[m.player] = (counts[m.player] || 0) + 1;
+                        });
+                        const sorted = Object.entries(counts).sort((a,b) => b[1] - a[1]);
+                        return sorted[0] ? sorted[0][0] + ' (' + sorted[0][1] + 'x)' : '-';
+                    })()"></p>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="glass-panel p-4 rounded-xl">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Buscar</label>
+                        <input type="text" x-model="movementsTab.searchQuery" placeholder="Jugador o equipo..."
+                            class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-white text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Manager</label>
+                        <select x-model="movementsTab.managerFilter"
+                            class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-white text-sm">
+                            <option value="all">Todos</option>
+                            <template x-for="m in Object.keys(managers)" :key="m">
+                                <option :value="m" x-text="m"></option>
+                            </template>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs text-gray-400 mb-1">Tipo</label>
+                        <select x-model="movementsTab.typeFilter"
+                            class="w-full bg-gray-900 border border-gray-700 rounded-lg p-2 text-white text-sm">
+                            <option value="all">Todos</option>
+                            <option value="transfer">Traspasos</option>
+                            <option value="reward">Recompensas</option>
+                        </select>
+                    </div>
+                    <div class="flex items-end">
+                        <button
+                            @click="movementsTab = {searchQuery: '', managerFilter: 'all', dateFrom: '', dateTo: '', typeFilter: 'all'}"
+                            class="w-full bg-gray-700 hover:bg-gray-600 text-white rounded-lg p-2 text-sm transition">
+                            🔄 Limpiar Filtros
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Movements Table -->
+            <div class="glass-panel p-4 rounded-xl overflow-x-auto max-h-[500px] overflow-y-auto">
+                <table class="w-full text-left text-sm">
+                    <thead class="sticky top-0 bg-gray-900 z-10">
+                        <tr class="text-gray-400 text-xs uppercase">
+                            <th class="px-3 py-2">Fecha</th>
+                            <th class="px-3 py-2">Tipo</th>
+                            <th class="px-3 py-2">Jugador</th>
+                            <th class="px-3 py-2">De</th>
+                            <th class="px-3 py-2">A</th>
+                            <th class="px-3 py-2 text-right">Importe</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template x-for="(mov, idx) in (() => {
+                            let filtered = [...movements];
+                            // Search filter
+                            if (movementsTab.searchQuery) {
+                                const q = movementsTab.searchQuery.toLowerCase();
+                                filtered = filtered.filter(m => 
+                                    m.player.toLowerCase().includes(q) || 
+                                    m.buyer.toLowerCase().includes(q) || 
+                                    m.seller.toLowerCase().includes(q)
+                                );
+                            }
+                            // Manager filter
+                            if (movementsTab.managerFilter !== 'all') {
+                                filtered = filtered.filter(m => m.buyer === movementsTab.managerFilter || m.seller === movementsTab.managerFilter);
+                            }
+                            // Type filter
+                            if (movementsTab.typeFilter !== 'all') {
+                                filtered = filtered.filter(m => m.type === movementsTab.typeFilter);
+                            }
+                            return filtered.slice(0, 200);
+                        })()" :key="idx">
+                            <tr class="border-b border-gray-800 hover:bg-gray-800/50">
+                                <td class="px-3 py-2 text-gray-400 text-xs" x-text="mov.date"></td>
+                                <td class="px-3 py-2">
+                                    <span class="px-2 py-0.5 rounded text-xs font-bold"
+                                        :class="mov.type === 'transfer' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'"
+                                        x-text="mov.type === 'transfer' ? '🔄 Traspaso' : '🎁 Reward'"></span>
+                                </td>
+                                <td class="px-3 py-2 font-medium text-white" x-text="mov.player"></td>
+                                <td class="px-3 py-2 text-red-400 cursor-pointer hover:underline"
+                                    @click="selectedManagerDetail = mov.seller; showManagerModal = true"
+                                    x-text="mov.seller"></td>
+                                <td class="px-3 py-2 text-green-400 cursor-pointer hover:underline"
+                                    @click="selectedManagerDetail = mov.buyer; showManagerModal = true"
+                                    x-text="mov.buyer"></td>
+                                <td class="px-3 py-2 text-right font-mono text-yellow-400"
+                                    x-text="formatMoney(mov.amount)"></td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- =============== MANAGER DETAIL MODAL =============== -->
+        <div x-show="showManagerModal" x-cloak
+            class="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+            @click.self="showManagerModal = false">
+            <div
+                class="bg-gray-900 rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border border-gray-700 shadow-2xl">
+                <!-- Header -->
+                <div class="sticky top-0 bg-gray-900 border-b border-gray-700 p-6 flex justify-between items-center">
+                    <h3 class="text-2xl font-bold text-white flex items-center gap-2">
+                        👤 <span x-text="selectedManagerDetail"></span>
+                    </h3>
+                    <button @click="showManagerModal = false" class="text-gray-400 hover:text-white text-2xl">×</button>
+                </div>
+
+                <template x-if="selectedManagerDetail && managers[selectedManagerDetail]">
+                    <div class="p-6 space-y-6">
+                        <!-- Manager Stats -->
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div class="glass-panel p-4 rounded-xl text-center">
+                                <p class="text-xs text-gray-400">💰 Balance</p>
+                                <p class="font-bold text-lg text-green-400"
+                                    x-text="formatMoney(sortedManagers.find(m => m.name === selectedManagerDetail)?.balance || 0)">
+                                </p>
+                            </div>
+                            <div class="glass-panel p-4 rounded-xl text-center">
+                                <p class="text-xs text-gray-400">📊 Valor Plantilla</p>
+                                <p class="font-bold text-lg text-cyan-400"
+                                    x-text="formatMoney(managers[selectedManagerDetail]?.teamValue || 0)"></p>
+                            </div>
+                            <div class="glass-panel p-4 rounded-xl text-center">
+                                <p class="text-xs text-gray-400">⚖️ Cláusulas</p>
+                                <p class="font-bold text-lg text-red-400"
+                                    x-text="formatMoney(managers[selectedManagerDetail]?.clauseExpenses || 0)"></p>
+                            </div>
+                            <div class="glass-panel p-4 rounded-xl text-center">
+                                <p class="text-xs text-gray-400">🏦 Patrimonio</p>
+                                <p class="font-bold text-lg text-yellow-400"
+                                    x-text="formatMoney((sortedManagers.find(m => m.name === selectedManagerDetail)?.balance || 0) + (managers[selectedManagerDetail]?.teamValue || 0))">
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Current Squad -->
+                        <div class="glass-panel p-4 rounded-xl">
+                            <h4 class="font-bold text-lg text-white mb-4">⚽ Plantilla Actual</h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead>
+                                        <tr class="text-gray-400 text-xs uppercase border-b border-gray-700">
+                                            <th class="px-3 py-2 text-left">Jugador</th>
+                                            <th class="px-3 py-2 text-right">Coste</th>
+                                            <th class="px-3 py-2 text-right">Valor Actual</th>
+                                            <th class="px-3 py-2 text-right">+/-</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template
+                                            x-for="(data, player) in (tradingHistory.rosters[selectedManagerDetail] || {})"
+                                            :key="player">
+                                            <tr class="border-b border-gray-800">
+                                                <td class="px-3 py-2 text-white" x-text="player"></td>
+                                                <td class="px-3 py-2 text-right text-gray-400"
+                                                    x-text="formatMoney(data.cost)"></td>
+                                                <td class="px-3 py-2 text-right text-cyan-400"
+                                                    x-text="formatMoney(marketData[player] || 0)"></td>
+                                                <td class="px-3 py-2 text-right font-bold"
+                                                    :class="(marketData[player] || 0) - data.cost > 0 ? 'text-green-400' : 'text-red-400'"
+                                                    x-text="((marketData[player] || 0) - data.cost > 0 ? '+' : '') + formatMoney((marketData[player] || 0) - data.cost)">
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- Recent Movements -->
+                        <div class="glass-panel p-4 rounded-xl">
+                            <h4 class="font-bold text-lg text-white mb-4">📋 Últimos Movimientos</h4>
+                            <div class="space-y-2 max-h-64 overflow-y-auto">
+                                <template
+                                    x-for="mov in movements.filter(m => m.buyer === selectedManagerDetail || m.seller === selectedManagerDetail).slice(0, 20)"
+                                    :key="mov.date + mov.player">
+                                    <div
+                                        class="flex justify-between items-center p-2 bg-gray-800/50 rounded-lg text-sm">
+                                        <div>
+                                            <span class="text-gray-400 text-xs" x-text="mov.date"></span>
+                                            <span class="ml-2 font-medium text-white" x-text="mov.player"></span>
+                                        </div>
+                                        <div class="text-right">
+                                            <span
+                                                :class="mov.buyer === selectedManagerDetail ? 'text-green-400' : 'text-red-400'"
+                                                x-text="(mov.buyer === selectedManagerDetail ? '← Compra' : '→ Venta')"></span>
+                                            <span class="ml-2 font-mono text-yellow-400"
+                                                x-text="formatMoney(mov.amount)"></span>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
     </main>
 
     <!-- LOGIC -->
@@ -1004,6 +1420,26 @@
                 },
                 selectedAnalyticsManager: '',
 
+                // MARKET EXPLORER STATE
+                marketExplorer: {
+                    sortBy: 'value',     // value, points, trend, trendPct
+                    sortDir: 'desc',
+                    positionFilter: 'all', // all, PT, DF, MD, DL
+                    searchQuery: ''
+                },
+
+                // MOVEMENTS TAB STATE
+                movementsTab: {
+                    searchQuery: '',
+                    managerFilter: 'all',
+                    dateFrom: '',
+                    dateTo: '',
+                    typeFilter: 'all'  // all, transfer, reward
+                },
+
+                // MANAGER DETAIL MODAL
+                selectedManagerDetail: null,
+                showManagerModal: false,
 
                 get filteredMovements() {
                     return this.movements.filter(m => {
@@ -1084,7 +1520,7 @@
 
                     this.$watch('managers', () => {
                         if (!this.isRemoteUpdate) this.debouncedSaveData();
-                    });
+                    }, { deep: true });
                     this.$watch('movements', () => {
                         if (!this.isRemoteUpdate) this.debouncedSaveData();
                         this.debouncedUpdateCharts();
@@ -1829,16 +2265,36 @@
                 },
 
                 // STORAGE
+                // Sanitize keys for Firebase (no dots, special chars)
+                sanitizeFirebaseKey(key) {
+                    return key.replace(/[.#$\/\[\]]/g, '_')
+                        .normalize('NFD').replace(/[\u0300-\u036f]/g, ''); // Remove accents
+                },
+
+                unsanitizeFirebaseKey(key) {
+                    // This is a one-way operation, we can't fully reverse it
+                    // but we store original keys in a separate lookup
+                    return key;
+                },
+
                 saveData() {
+                    // Sanitize marketData keys for Firebase compatibility
+                    const sanitizedMarketData = {};
+                    Object.entries(this.marketData).forEach(([key, value]) => {
+                        sanitizedMarketData[this.sanitizeFirebaseKey(key)] = value;
+                    });
+
                     const data = {
                         managers: this.managers,
                         movements: this.movements,
-                        marketData: this.marketData, // Persist dynamic market data
+                        marketData: sanitizedMarketData, // Sanitized keys
                         lastUpdate: Date.now()
                     };
 
                     if (db) {
-                        db.ref('fantasy_data').set(data);
+                        db.ref('fantasy_data').set(data)
+                            .then(() => console.log('Data saved to Firebase'))
+                            .catch(err => console.error('Firebase save error:', err));
                     } else {
                         localStorage.setItem('fantasy_gameplay_data', JSON.stringify(data));
                     }
