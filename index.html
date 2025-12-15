@@ -1021,8 +1021,22 @@
                                 });
 
                                 this.movements = val.movements || [];
+
+                                // MIGRATE MOVEMENTS
+                                let corrected = 0;
+                                const nameMap = { 'Vigar24': 'Vigar FC' };
+                                this.movements.forEach(m => {
+                                    const proc = n => { if (!n) return n; let c = n.trim(); return nameMap[c] || c; };
+                                    if (m.buyer) { let n = proc(m.buyer); if (n !== m.buyer) { m.buyer = n; corrected++; } }
+                                    if (m.seller) { let n = proc(m.seller); if (n !== m.seller) { m.seller = n; corrected++; } }
+                                    if (m.beneficiary) { let n = proc(m.beneficiary); if (n !== m.beneficiary) { m.beneficiary = n; corrected++; } }
+                                });
+
                                 // Allow watchers again after Alpine processes the change
-                                this.$nextTick(() => { this.isRemoteUpdate = false; });
+                                this.$nextTick(() => {
+                                    this.isRemoteUpdate = false;
+                                    if (corrected > 0) this.saveData();
+                                });
 
                                 this.addLog(`Sincronizado con Firebase (${this.movements.length} movs). Datos limpiados.`, 'success');
                             }
@@ -1046,6 +1060,18 @@
                             });
 
                             this.movements = data.movements || [];
+
+                            // MIGRATE MOVEMENTS (Local)
+                            let corrected = 0;
+                            const nameMap = { 'Vigar24': 'Vigar FC' };
+                            this.movements.forEach(m => {
+                                const proc = n => { if (!n) return n; let c = n.trim(); return nameMap[c] || c; };
+                                if (m.buyer) { let n = proc(m.buyer); if (n !== m.buyer) { m.buyer = n; corrected++; } }
+                                if (m.seller) { let n = proc(m.seller); if (n !== m.seller) { m.seller = n; corrected++; } }
+                                if (m.beneficiary) { let n = proc(m.beneficiary); if (n !== m.beneficiary) { m.beneficiary = n; corrected++; } }
+                            });
+                            if (corrected > 0) this.saveData();
+
                             this.addLog('Datos cargados de LocalStorage (Limpios)', 'info');
                         }
                     }
