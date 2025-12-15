@@ -1223,11 +1223,17 @@
 
         <!-- =============== MOVEMENTS HISTORY TAB =============== -->
         <div x-show="currentTab === 'movements'" x-cloak class="space-y-6">
-            <h2 class="text-2xl font-bold text-orange-400 flex items-center gap-2">
-                📋 Historial de Movimientos
-                <span class="text-sm font-normal text-gray-400"
-                    x-text="'(' + movements.length + ' operaciones)'"></span>
-            </h2>
+            <div class="flex justify-between items-center flex-wrap gap-4">
+                <h2 class="text-2xl font-bold text-orange-400 flex items-center gap-2">
+                    📋 Historial de Movimientos
+                    <span class="text-sm font-normal text-gray-400"
+                        x-text="'(' + movements.length + ' operaciones)'"></span>
+                </h2>
+                <button @click="exportMovementsCSV()"
+                    class="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/50 rounded-lg text-sm font-medium flex items-center gap-2 transition-all">
+                    📁 Exportar CSV
+                </button>
+            </div>
 
             <!-- Movement KPIs -->
             <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -1603,6 +1609,11 @@
                 },
                 selectedAnalyticsManager: '',
 
+                // MANAGER COMPARATOR
+                comparatorManager1: '',
+                comparatorManager2: '',
+                showComparator: false,
+
                 // MARKET EXPLORER STATE
                 marketExplorer: {
                     sortBy: 'value',     // value, points, trend, trendPct
@@ -1886,6 +1897,82 @@
                         this.watchlist.push(playerName);
                     }
                     localStorage.setItem('fantasy_watchlist', JSON.stringify(this.watchlist));
+                },
+
+                // MANAGER COMPARATOR
+                getCompareData() {
+                    const m1 = this.managers[this.comparatorManager1];
+                    const m2 = this.managers[this.comparatorManager2];
+                    if (!m1 || !m2) return null;
+
+                    const m1Buys = this.movements.filter(m => m.type === 'transfer' && m.buyer === this.comparatorManager1).length;
+                    const m1Sales = this.movements.filter(m => m.type === 'transfer' && m.seller === this.comparatorManager1).length;
+                    const m2Buys = this.movements.filter(m => m.type === 'transfer' && m.buyer === this.comparatorManager2).length;
+                    const m2Sales = this.movements.filter(m => m.type === 'transfer' && m.seller === this.comparatorManager2).length;
+
+                    return {
+                        m1: {
+                            name: this.comparatorManager1,
+                            balance: m1.balance,
+                            teamValue: m1.teamValue,
+                            patrimony: m1.balance + m1.teamValue,
+                            clauses: m1.clauseExpenses,
+                            buys: m1Buys,
+                            sales: m1Sales
+                        },
+                        m2: {
+                            name: this.comparatorManager2,
+                            balance: m2.balance,
+                            teamValue: m2.teamValue,
+                            patrimony: m2.balance + m2.teamValue,
+                            clauses: m2.clauseExpenses,
+                            buys: m2Buys,
+                            sales: m2Sales
+                        }
+                    };
+                },
+
+                // CSV EXPORT
+                exportMovementsCSV() {
+                    const headers = ['Fecha', 'Tipo', 'Jugador', 'Comprador', 'Vendedor', 'Cantidad'];
+                    const rows = this.movements.map(m => [
+                        m.date || '',
+                        m.type || '',
+                        m.player || '',
+                        m.buyer || '',
+                        m.seller || '',
+                        m.amount || ''
+                    ]);
+                    this.downloadCSV('movimientos.csv', headers, rows);
+                },
+
+                exportWatchlistCSV() {
+                    const headers = ['Jugador', 'Valor', 'Posición', 'Puntos', 'PPM', 'Cambio €', 'Cambio %'];
+                    const rows = this.watchlist.map(name => {
+                        const value = this.marketData[name] || 0;
+                        const info = (typeof MARKET_INFO !== 'undefined' && MARKET_INFO[name]) || {};
+                        const trend = (typeof MARKET_TRENDS !== 'undefined' && MARKET_TRENDS[name]) || {};
+                        return [
+                            name,
+                            value,
+                            info.position || '',
+                            info.points || 0,
+                            ((info.points || 0) / (value / 1000000)).toFixed(2),
+                            trend.trend || 0,
+                            (trend.trendPct || 0).toFixed(2) + '%'
+                        ];
+                    });
+                    this.downloadCSV('watchlist.csv', headers, rows);
+                },
+
+                downloadCSV(filename, headers, rows) {
+                    const csvContent = [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+                    const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = filename;
+                    link.click();
+                    this.addLog(`📁 Exportado: ${filename}`, 'success');
                 },
 
                 // CALCS
