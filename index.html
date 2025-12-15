@@ -1,344 +1,204 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" class="dark">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GamePlay Manager | Fantasy League</title>
-
+    <title>Fantasy Manager Pro</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Alpine.js -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Market Data -->
+    <script src="market_data.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 1rem;
+        }
+
+        .sidebar-link {
+            transition: all 0.2s;
+        }
+
+        .sidebar-link:hover,
+        .sidebar-link.active {
+            background: rgba(59, 130, 246, 0.1);
+            color: #60a5fa;
+            border-right: 3px solid #60a5fa;
+        }
+    </style>
     <script>
         tailwind.config = {
             darkMode: 'class',
             theme: {
                 extend: {
-                    animation: {
-                        'gradient-x': 'gradient-x 3s ease infinite',
-                    },
-                    keyframes: {
-                        'gradient-x': {
-                            '0%, 100%': {
-                                'background-size': '200% 200%',
-                                'background-position': 'left center'
-                            },
-                            '50%': {
-                                'background-size': '200% 200%',
-                                'background-position': 'right center'
-                            },
-                        },
-                    },
                     colors: {
-                        gray: {
-                            850: '#1f2937',
-                            900: '#111827',
-                            950: '#030712',
-                        },
-                        neon: {
-                            blue: '#00f3ff',
-                            green: '#00ff9d',
-                            pink: '#ff00d4',
-                            purple: '#bc13fe'
-                        }
-                    },
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
+                        dark: { bg: '#0f172a', card: '#1e293b' },
+                        brand: { blue: '#3b82f6', purple: '#8b5cf6', green: '#10b981', red: '#ef4444' }
                     }
                 }
             }
         }
     </script>
-
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-    <!-- Alpine.js -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
-    <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-    <script src="market_data.js"></script>
-
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
-
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-
-        .glass-panel {
-            background: rgba(31, 41, 55, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #111827;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #374151;
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #4b5563;
-        }
-    </style>
 </head>
 
-<body class="bg-gray-950 text-gray-100 min-h-screen selection:bg-neon-blue selection:text-black" x-data="gamePlayApp()"
-    x-init="initApp()">
+<body class="h-screen overflow-hidden flex text-sm">
 
-    <!-- Navbar -->
-    <nav class="sticky top-0 z-50 glass-panel border-b border-gray-800">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-3">
-                    <div
-                        class="w-8 h-8 rounded bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center font-bold text-black text-xs">
-                        GP</div>
-                    <span
-                        class="font-bold text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-neon-blue to-neon-purple animate-gradient-x">GamePlay
-                        Manager</span>
-                    <span
-                        class="ml-2 px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 text-[10px] tracking-widest font-bold border border-yellow-500/30 uppercase shadow-[0_0_10px_rgba(234,179,8,0.2)]">Premium</span>
-                </div>
-                <div class="flex space-x-4">
-                    <button @click="currentTab = 'dashboard'" :class="{'text-neon-blue': currentTab === 'dashboard'}"
-                        class="hover:text-white transition-colors text-sm font-medium">Dashboard</button>
-                    <button @click="currentTab = 'parser'" :class="{'text-neon-green': currentTab === 'parser'}"
-                        class="hover:text-white transition-colors text-sm font-medium">Magic Parser</button>
-                    <button @click="currentTab = 'stats'" :class="{'text-neon-pink': currentTab === 'stats'}"
-                        class="hover:text-white transition-colors text-sm font-medium">Estadísticas</button>
-                    <button @click="currentTab = 'clauses'" :class="{'text-neon-purple': currentTab === 'clauses'}"
-                        class="hover:text-white transition-colors text-sm font-medium">Cláusulas</button>
-                    <button @click="currentTab = 'advanced'" :class="{'text-yellow-400': currentTab === 'advanced'}"
-                        class="hover:text-white transition-colors text-sm font-medium flex items-center gap-1">
-                        <span>🚀</span> Métricas Avanzadas
+    <div x-data="gamePlayApp()" x-init="initApp()" class="flex w-full h-full">
+
+        <!-- SIDEBAR -->
+        <aside
+            class="w-64 flex-shrink-0 bg-slate-900 border-r border-slate-800 flex flex-col transition-all duration-300"
+            :class="{'w-20': collapsed}">
+            <div class="h-16 flex items-center justify-center border-b border-slate-800">
+                <i class="fas fa-bolt text-yellow-400 text-2xl mr-2"></i>
+                <span class="font-bold text-xl tracking-tight" x-show="!collapsed">Fantasy<span
+                        class="text-blue-500">Pro</span></span>
+            </div>
+            <nav class="flex-1 overflow-y-auto py-4 space-y-1">
+                <template x-for="item in navItems" :key="item.id">
+                    <a @click="currentView = item.id"
+                        class="sidebar-link flex items-center px-6 py-3 cursor-pointer text-slate-400 hover:text-white"
+                        :class="{'active': currentView === item.id}">
+                        <i :class="item.icon + ' w-6 text-center'"></i>
+                        <span class="ml-3 font-medium" x-show="!collapsed" x-text="item.label"></span>
+                    </a>
+                </template>
+            </nav>
+            <div class="p-4 border-t border-slate-800">
+                <button @click="collapsed = !collapsed"
+                    class="w-full flex items-center justify-center p-2 rounded-lg hover:bg-slate-800 text-slate-400">
+                    <i :class="collapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-left'"></i>
+                </button>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 flex flex-col min-w-0 bg-slate-950 overflow-hidden relative">
+
+            <header
+                class="h-16 flex items-center justify-between px-8 bg-slate-900/50 backdrop-blur border-b border-slate-800 z-10">
+                <h1 class="text-xl font-bold text-white capitalize"
+                    x-text="navItems.find(i=>i.id===currentView)?.label"></h1>
+                <div class="flex items-center gap-4">
+                    <span class="text-xs text-slate-500 bg-slate-800 px-3 py-1 rounded-full border border-slate-700">
+                        <i class="fas fa-database mr-1"></i> <span x-text="movements.length + ' movs'"></span>
+                    </span>
+                    <button
+                        class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow-lg shadow-blue-500/20 transition-all flex items-center gap-2"
+                        @click="reconstructTradingHistory(); addLog('Datos recalculados', 'info')">
+                        <i class="fas fa-sync-alt"></i> Recalcular
                     </button>
                 </div>
-            </div>
-        </div>
-    </nav>
+            </header>
 
-    <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="flex-1 overflow-y-auto p-8 relative">
 
-        <!-- DASHBOARD VIEW -->
-        <div x-show="currentTab === 'dashboard'" x-transition.opacity>
-            <!-- Header Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <!-- Total Mercado -->
-                <div class="glass-panel rounded-xl p-6 relative overflow-hidden group">
-                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <svg class="w-16 h-16 text-neon-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
-                            </path>
-                        </svg>
-                    </div>
-                    <p class="text-sm text-gray-400 font-medium">Dinero en Juego (Total Saldos)</p>
-                    <h3 class="text-2xl font-bold mt-2 text-neon-blue" x-text="formatMoney(calculateTotalBalance())">
-                    </h3>
-                </div>
-
-                <!-- Total Valor Equipos -->
-                <div class="glass-panel rounded-xl p-6 relative overflow-hidden group">
-                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <svg class="w-16 h-16 text-neon-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
-                            </path>
-                        </svg>
-                    </div>
-                    <p class="text-sm text-gray-400 font-medium">Valor Total Plantillas</p>
-                    <h3 class="text-2xl font-bold mt-2 text-neon-green" x-text="formatMoney(calculateTotalTeamValue())">
-                    </h3>
-                </div>
-
-                <!-- Movimientos Registrados -->
-                <div class="glass-panel rounded-xl p-6 relative overflow-hidden group">
-                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <svg class="w-16 h-16 text-neon-pink" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
-                        </svg>
-                    </div>
-                    <p class="text-sm text-gray-400 font-medium">Movimientos Procesados</p>
-                    <h3 class="text-2xl font-bold mt-2 text-neon-pink" x-text="getTotalMovements()"></h3>
-                </div>
-
-                <!-- Gasto en Cláusulas -->
-                <div class="glass-panel rounded-xl p-6 relative overflow-hidden group">
-                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                        <svg class="w-16 h-16 text-neon-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
-                            </path>
-                        </svg>
-                    </div>
-                    <p class="text-sm text-gray-400 font-medium">Gasto Total Cláusulas</p>
-                    <h3 class="text-2xl font-bold mt-2 text-neon-purple" x-text="formatMoney(calculateTotalClauses())">
-                    </h3>
-                </div>
-            </div>
-
-            <!-- Main Table -->
-            <div class="glass-panel rounded-xl overflow-hidden shadow-2xl">
-                <div class="px-6 py-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center">
-                    <h2 class="text-lg font-bold text-white">Clasificación Financiera</h2>
-                    <span class="text-xs text-gray-500 flex items-center gap-1">
-                        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                        En vivo
-                    </span>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left">
-                        <thead>
-                            <tr class="text-gray-400 text-xs uppercase bg-gray-900/30">
-                                <th class="px-6 py-3 font-semibold">Manager</th>
-                                <th class="px-6 py-3 font-semibold text-right">Saldo Caja</th>
-                                <th class="px-6 py-3 font-semibold text-right">Valor Equipo</th>
-                                <th class="px-6 py-3 font-semibold text-right">Patrimonio</th>
-                                <th class="px-6 py-3 font-semibold text-right text-neon-blue">Puja Máxima</th>
-                                <th class="px-6 py-3 font-semibold text-right text-red-400">Gasto Cláusulas</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-800">
-                            <template x-for="m in sortedManagers" :key="m.name">
-                                <tr class="hover:bg-white/5 transition-colors group">
-                                    <td class="px-6 py-4">
-                                        <div class="flex items-center gap-3">
-                                            <div class="w-8 h-8 rounded bg-gray-800 flex items-center justify-center font-bold text-gray-300 border border-gray-700"
-                                                x-text="m.name.substring(0,2).toUpperCase()"></div>
-                                            <span
-                                                class="font-medium text-white group-hover:text-neon-blue transition-colors"
-                                                x-text="m.name"></span>
-                                        </div>
-                                    </td>
-                                    <td class="px-6 py-4 text-right font-mono text-gray-300"
-                                        x-text="formatMoney(m.balance)"></td>
-                                    <td class="px-6 py-4 text-right font-mono text-gray-300"
-                                        x-text="formatMoney(m.teamValue)"></td>
-                                    <td class="px-6 py-4 text-right font-mono font-bold text-white"
-                                        x-text="formatMoney(m.balance + m.teamValue)"></td>
-                                    <td class="px-6 py-4 text-right font-mono font-bold text-neon-blue"
-                                        x-text="formatMoney(calculateMaxBid(m))"></td>
-                                    <td class="px-6 py-4 text-right font-mono text-red-400"
-                                        x-text="formatMoney(m.clauseExpenses)"></td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-
-        </div>
-
-        <!-- MAGIC PARSER VIEW -->
-        <div x-show="currentTab === 'parser'" x-transition.opacity>
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Input Area -->
-                <div class="lg:col-span-2 space-y-6">
-                    <div class="glass-panel rounded-xl p-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <h2 class="text-xl font-bold text-white flex items-center gap-2">
-                                <svg class="w-5 h-5 text-neon-green" fill="none" viewBox="0 0 24 24"
-                                    stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                        d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                                </svg>
-                                Magic Parser
-                            </h2>
-                            <div class="flex gap-2">
-                                <!-- Botón Importar Archivo -->
-                                <label
-                                    class="px-4 py-2 bg-neon-blue/10 hover:bg-neon-blue/20 text-neon-blue border border-neon-blue/50 rounded-lg text-sm font-bold transition-all hover:scale-105 active:scale-95 flex items-center gap-2 cursor-pointer">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                    </svg>
-                                    Importar .txt
-                                    <input type="file" accept=".txt" @change="importFromFile($event)" class="hidden" />
-                                </label>
-                                <!-- Botón Procesar Texto -->
-                                <button @click="processInput()"
-                                    class="px-4 py-2 bg-neon-green/10 hover:bg-neon-green/20 text-neon-green border border-neon-green/50 rounded-lg text-sm font-bold transition-all hover:scale-105 active:scale-95 flex items-center gap-2">
-                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    Procesar Datos
-                                </button>
-                            </div>
+                <!-- DASHBOARD -->
+                <div x-show="currentView === 'dashboard'" class="space-y-6" x-transition.opacity>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="glass-card p-6 flex flex-col relative overflow-hidden group">
+                            <div
+                                class="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                                <i class="fas fa-money-bill-wave text-6xl text-green-500"></i></div>
+                            <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Volumen
+                                Negociado</span>
+                            <span class="text-2xl font-bold text-white mt-1"
+                                x-text="formatMoney(calculateTotalVolume())"></span>
                         </div>
-                        <p class="text-sm text-gray-400 mb-2">Copia y pega texto directamente desde la app de Fantasy
-                            (Movimientos de mercado, valores de equipo, premios).</p>
-                        <textarea x-model="rawInput"
-                            class="w-full h-96 bg-gray-900/50 border border-gray-700 rounded-lg p-4 font-mono text-sm text-gray-300 focus:ring-2 focus:ring-neon-blue focus:border-transparent outline-none resize-none"
-                            placeholder="Paste your raw data here..."></textarea>
+                        <div class="glass-card p-6 flex flex-col relative overflow-hidden group">
+                            <div
+                                class="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                                <i class="fas fa-users text-6xl text-blue-500"></i></div>
+                            <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Managers</span>
+                            <span class="text-2xl font-bold text-white mt-1"
+                                x-text="Object.keys(managers).length"></span>
+                        </div>
+                        <div class="glass-card p-6 flex flex-col relative overflow-hidden group">
+                            <div
+                                class="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                                <i class="fas fa-chart-line text-6xl text-purple-500"></i></div>
+                            <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Mercado
+                                (Jugadores)</span>
+                            <span class="text-2xl font-bold text-white mt-1"
+                                x-text="formatMoney(calculateMarketTotal())"></span>
+                            <span class="text-xs text-green-400 mt-1"
+                                x-text="Object.keys(marketData).length + ' jugadores'"></span>
+                        </div>
+                        <div class="glass-card p-6 flex flex-col relative overflow-hidden group">
+                            <div
+                                class="absolute right-0 top-0 p-4 opacity-10 group-hover:scale-110 transition-transform">
+                                <i class="fas fa-trophy text-6xl text-yellow-500"></i></div>
+                            <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Líder
+                                (Patrimonio)</span>
+                            <span class="text-xl font-bold text-white mt-1 truncate"
+                                x-text="marketValuation.sort((a,b)=>(b.marketValue+b.balance)-(a.marketValue+a.balance))[0]?.name || '-'"></span>
+                        </div>
                     </div>
 
-                    <!-- PREVIEW AREA -->
-                    <div x-show="pendingMovements.length > 0" x-transition
-                        class="glass-panel rounded-xl p-6 border border-neon-blue/30">
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-xl font-bold text-white">Vista Previa (<span
-                                    x-text="pendingMovements.length"></span> ítems)</h3>
-                            <div class="flex gap-3">
-                                <button @click="cancelImport()"
-                                    class="px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/50 rounded-lg text-sm font-bold transition-all">Cancelar</button>
-                                <button @click="confirmImport()"
-                                    class="px-4 py-2 bg-neon-blue hover:bg-neon-blue/80 text-black border border-transparent rounded-lg text-sm font-bold transition-all shadow-[0_0_15px_rgba(0,243,255,0.3)] animate-pulse">Confirmar
-                                    Importación</button>
-                            </div>
-                        </div>
-                        <div class="overflow-x-auto max-h-96 rounded-lg border border-gray-700">
-                            <table class="w-full text-left text-sm">
-                                <thead class="bg-gray-800 text-gray-400 text-xs uppercase sticky top-0">
-                                    <tr>
-                                        <th class="p-3">Fecha</th>
-                                        <th class="p-3">Tipo</th>
-                                        <th class="p-3">Detalle</th>
-                                        <th class="p-3 text-right">Cantidad</th>
+                    <div class="glass-card p-6">
+                        <h3 class="text-lg font-bold text-white mb-4"><i
+                                class="fas fa-trophy text-yellow-400 mr-2"></i>Clasificación Rápida</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="text-slate-400 border-b border-slate-700 text-xs uppercase">
+                                        <th class="p-3">Manager</th>
+                                        <th class="p-3 text-right">Caja</th>
+                                        <th class="p-3 text-right">Plantilla</th>
+                                        <th class="p-3 text-right font-bold text-white">Patrimonio Total</th>
+                                        <th class="p-3 text-right text-blue-400">Puja Máx</th>
                                     </tr>
                                 </thead>
-                                <tbody class="divide-y divide-gray-700 bg-gray-900/50">
-                                    <template x-for="pm in pendingMovements" :key="pm.id">
-                                        <tr>
-                                            <td class="p-3 font-mono text-xs text-gray-500" x-text="pm.date"></td>
-                                            <td class="p-3">
-                                                <span class="px-2 py-0.5 rounded text-xs font-bold"
-                                                    :class="pm.type === 'transfer' ? 'bg-blue-900/50 text-blue-300' : 'bg-yellow-900/50 text-yellow-300'"
-                                                    x-text="pm.type.toUpperCase()"></span>
+                                <tbody>
+                                    <template
+                                        x-for="mgr in marketValuation.sort((a,b) => (b.balance+b.marketValue)-(a.balance+a.marketValue))"
+                                        :key="mgr.name">
+                                        <tr
+                                            class="border-b border-slate-700/50 hover:bg-slate-800/50 transition-colors">
+                                            <td class="p-3 font-medium text-white" x-text="mgr.name"></td>
+                                            <td class="p-3 text-right text-slate-400" x-text="formatMoney(mgr.balance)">
                                             </td>
-                                            <td class="p-3 text-gray-300">
-                                                <div x-show="pm.type === 'transfer'">
-                                                    <span x-text="pm.player" class="font-bold text-white"></span>
-                                                    <span class="text-xs text-gray-500 block">
-                                                        <span x-text="pm.seller"></span> ➜ <span
-                                                            x-text="pm.buyer"></span>
-                                                    </span>
-                                                </div>
-                                                <div x-show="pm.type === 'reward'">
-                                                    <span x-text="pm.beneficiary" class="font-bold"></span>
-                                                    <span class="text-xs text-gray-500 block"
-                                                        x-text="pm.subtype"></span>
-                                                </div>
-                                            </td>
-                                            <td class="p-3 text-right font-mono"
-                                                :class="pm.type === 'transfer' ? 'text-neon-green' : 'text-neon-purple'"
-                                                x-text="formatMoney(pm.amount)"></td>
+                                            <td class="p-3 text-right text-green-400"
+                                                x-text="formatMoney(mgr.marketValue)"></td>
+                                            <td class="p-3 text-right font-bold text-white"
+                                                x-text="formatMoney(mgr.balance + mgr.marketValue)"></td>
+                                            <td class="p-3 text-right font-mono text-blue-400"
+                                                x-text="formatMoney(mgr.balance + (mgr.marketValue * 0.2))"></td>
                                         </tr>
                                     </template>
                                 </tbody>
@@ -347,524 +207,418 @@
                     </div>
                 </div>
 
-                <!-- Log / Guide Area -->
-                <div class="space-y-6">
-                    <div class="glass-panel rounded-xl p-6">
-                        <h3 class="text-md font-bold text-white mb-4">Registro de Procesamiento</h3>
-                        <div class="h-64 overflow-y-auto space-y-2 pr-2 font-mono text-xs">
-                            <template x-for="log in logs" :key="log.id">
-                                <div class="p-2 rounded bg-black/20 border-l-2"
-                                    :class="log.type === 'success' ? 'border-green-500 text-green-400' : (log.type === 'info' ? 'border-blue-500 text-blue-300' : 'border-yellow-500 text-yellow-300')">
-                                    <span class="opacity-50" x-text="log.time"></span>
-                                    <span x-text="log.msg"></span>
-                                </div>
-                            </template>
-                            <div x-show="logs.length === 0" class="text-gray-600 text-center italic mt-10">Esperando
-                                datos...</div>
+                <!-- CLASIFICACION DETALLADA -->
+                <div x-show="currentView === 'clasificacion'" class="space-y-6" x-transition.opacity>
+                    <div class="glass-card overflow-hidden">
+                        <div class="p-4 bg-slate-900 border-b border-slate-800">
+                            <h3 class="text-white font-bold"><i class="fas fa-chart-pie mr-2"></i>Análisis Financiero &
+                                Inflación</h3>
                         </div>
-                    </div>
-
-
-                </div>
-            </div>
-        </div>
-
-        <!-- MOVEMENTS VIEW -->
-        <div x-show="currentTab === 'movements'" x-transition.opacity>
-            <!-- Filters -->
-            <div
-                class="glass-panel p-4 rounded-xl mb-6 flex flex-wrap gap-4 items-center sticky top-20 z-40 backdrop-blur-md bg-gray-900/80 border border-neon-blue/20">
-                <div class="flex-grow relative">
-                    <svg class="w-5 h-5 absolute left-3 top-2.5 text-gray-500" fill="none" viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                    <input type="text" x-model="filters.search" placeholder="Buscar jugador, equipo..."
-                        class="w-full bg-gray-900 border border-gray-700 rounded-lg pl-10 pr-4 py-2 text-white focus:ring-1 focus:ring-neon-blue outline-none">
-                </div>
-
-                <select x-model="filters.team"
-                    class="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white outline-none">
-                    <option value="all">Todos los Equipos</option>
-                    <template x-for="m in Object.keys(managers)" :key="m">
-                        <option :value="m" x-text="m"></option>
-                    </template>
-                </select>
-
-                <select x-model="filters.type"
-                    class="bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 text-white outline-none">
-                    <option value="all">Todos los Tipos</option>
-                    <option value="transfer">Transferencias</option>
-                    <option value="reward">Premios</option>
-                    <option value="shield">Blindajes</option>
-                </select>
-
-                <div class="text-xs text-gray-400 font-mono">
-                    <span x-text="filteredMovements.length"></span> resultados
-                </div>
-            </div>
-
-            <!-- Table -->
-            <div class="glass-panel rounded-xl overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm">
-                        <thead class="bg-gray-800 text-gray-400 text-xs uppercase">
-                            <tr>
-                                <th class="p-3">Fecha</th>
-                                <th class="p-3">Tipo</th>
-                                <th class="p-3">Detalle</th>
-                                <th class="p-3 text-right">Importe</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-700 bg-gray-900/50">
-                            <template x-for="(mov, index) in filteredMovements" :key="mov.id || index">
-                                <tr class="hover:bg-white/5 transition-colors">
-                                    <td class="p-3 font-mono text-xs text-gray-500" x-text="mov.date"></td>
-                                    <td class="p-3">
-                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider"
-                                            :class="{
-                                                 'bg-blue-900/50 text-blue-300': mov.type === 'transfer',
-                                                 'bg-yellow-900/50 text-yellow-300': mov.type === 'reward',
-                                                 'bg-purple-900/50 text-purple-300': mov.type === 'shield'
-                                             }" x-text="mov.type"></span>
-                                    </td>
-                                    <td class="p-3">
-                                        <div x-show="mov.type === 'transfer'">
-                                            <div class="font-bold text-white flex items-center gap-2">
-                                                <span x-text="mov.player"></span>
-                                            </div>
-                                            <div class="text-xs text-gray-500 mt-1">
-                                                <span x-text="mov.seller" class="font-medium"
-                                                    :class="mov.seller === filters.team ? 'text-neon-blue' : ''"></span>
-                                                <span class="mx-1">➜</span>
-                                                <span x-text="mov.buyer" class="font-medium"
-                                                    :class="mov.buyer === filters.team ? 'text-neon-green' : ''"></span>
-                                            </div>
-                                        </div>
-                                        <div x-show="mov.type !== 'transfer'">
-                                            <span x-text="mov.details || mov.subtype || mov.type"
-                                                class="text-white"></span>
-                                            <span x-show="mov.beneficiary" x-text="'PARA: ' + mov.beneficiary"
-                                                class="text-xs text-gray-500 block mt-1"></span>
-                                        </div>
-                                    </td>
-                                    <td class="p-3 text-right font-mono"
-                                        :class="mov.amount > 0 ? 'text-green-400' : 'text-gray-500'"
-                                        x-text="formatMoney(mov.amount)"></td>
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-900 border-b border-slate-700">
+                                <tr class="text-slate-400 text-xs uppercase">
+                                    <th class="p-4">Manager</th>
+                                    <th class="p-4 text-right">Inversión (Coste)</th>
+                                    <th class="p-4 text-right">Valor Actual</th>
+                                    <th class="p-4 text-right text-green-400">Inflación (Latente)</th>
+                                    <th class="p-4 text-right text-yellow-400">Profit Realizado</th>
+                                    <th class="p-4 text-right text-blue-400">ROI Total</th>
                                 </tr>
-                            </template>
-                        </tbody>
-                    </table>
-                    <div x-show="filteredMovements.length === 0"
-                        class="p-12 text-center text-gray-500 flex flex-col items-center">
-                        <svg class="w-12 h-12 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
-                        <p>No se encontraron movimientos con estos filtros.</p>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800">
+                                <template
+                                    x-for="mgr in marketValuation.sort((a,b) => b.unrealizedProfit - a.unrealizedProfit)"
+                                    :key="mgr.name">
+                                    <tr class="hover:bg-slate-800/50 transition-colors">
+                                        <td class="p-4 font-semibold text-white" x-text="mgr.name"></td>
+                                        <td class="p-4 text-right text-slate-400" x-text="formatMoney(mgr.invested)">
+                                        </td>
+                                        <td class="p-4 text-right text-white" x-text="formatMoney(mgr.marketValue)">
+                                        </td>
+                                        <td class="p-4 text-right font-bold"
+                                            :class="mgr.unrealizedProfit > 0 ? 'text-green-500' : 'text-red-500'"
+                                            x-text="formatMoney(mgr.unrealizedProfit)"></td>
+                                        <td class="p-4 text-right font-mono text-yellow-500"
+                                            x-text="formatMoney(tradingHistory.managerStats[mgr.name]?.profit || 0)">
+                                        </td>
+                                        <td class="p-4 text-right font-mono text-blue-400"
+                                            x-text="mgr.invested > 0 ? ((mgr.unrealizedProfit / mgr.invested)*100).toFixed(1) + '%' : '0%'">
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- CLAUSES VIEW -->
-        <div x-show="currentTab === 'clauses'" x-transition.opacity>
-            <div class="max-w-3xl mx-auto glass-panel rounded-xl p-8">
-                <h2 class="text-2xl font-bold text-white mb-6 text-neon-purple flex items-center gap-2">
-                    <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Gestión de Cláusulas
-                </h2>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <!-- Manual Input -->
-                    <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Manager</label>
-                        <select x-model="clauseForm.manager"
-                            class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:ring-1 focus:ring-neon-purple outline-none">
-                            <option value="">Selecciona un equipo</option>
-                            <template x-for="m in sortedManagers" :key="m.name">
-                                <option :value="m.name" x-text="m.name"></option>
-                            </template>
+                <!-- JUGADORES (ALL PLAYERS) -->
+                <div x-show="currentView === 'jugadores'" class="space-y-6" x-transition.opacity>
+                    <div class="flex flex-wrap gap-4 mb-4">
+                        <input type="text" x-model="playerFilters.search" placeholder="🔍 Buscar jugador..."
+                            class="bg-slate-800 border-slate-700 rounded-lg p-3 text-white flex-grow focus:ring-2 focus:ring-blue-500 outline-none">
+                        <select x-model="playerFilters.owner"
+                            class="bg-slate-800 border-slate-700 rounded-lg p-3 text-white outline-none">
+                            <option value="all">Todos los Estados</option>
+                            <option value="free">Solo Libres</option>
+                            <option value="owned">Con Dueño</option>
+                        </select>
+                        <select x-model="playerFilters.sort"
+                            class="bg-slate-800 border-slate-700 rounded-lg p-3 text-white outline-none">
+                            <option value="value_desc">Mayor Valor</option>
+                            <option value="value_asc">Menor Valor</option>
+                            <option value="cost_desc">Mayor Coste</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-400 mb-2">Importe Gastado (€)</label>
-                        <input type="number" x-model="clauseForm.amount"
-                            class="w-full bg-gray-900 border border-gray-700 rounded-lg p-3 text-white focus:ring-1 focus:ring-neon-purple outline-none"
-                            placeholder="Ej: 5000000">
-                    </div>
-                </div>
-                <button @click="addClauseExpense()"
-                    class="w-full py-3 bg-neon-purple/20 hover:bg-neon-purple/30 text-neon-purple border border-neon-purple/50 rounded-lg font-bold transition-all">
-                    Registrar Gasto de Cláusula
-                </button>
 
-                <!-- Bulk Import -->
-                <div class="mt-8 pt-8 border-t border-gray-800">
-                    <h3 class="text-lg font-semibold text-white mb-4">Importar CSV (Equipo [TAB] Importe)</h3>
-                    <textarea x-model="clauseBulkInput"
-                        class="w-full h-32 bg-gray-900/50 border border-gray-700 rounded-lg p-4 font-mono text-xs text-gray-400"
-                        placeholder="Alcatamy eSports By	168.850.000 €..."></textarea>
-                    <button @click="processClauseBulk()"
-                        class="mt-3 px-4 py-2 text-xs bg-gray-800 hover:bg-gray-700 text-white rounded border border-gray-600">Importar
-                        Lote</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- STATS VIEW -->
-        <div x-show="currentTab === 'stats'" x-transition.opacity>
-
-            <h3 class="text-white font-bold mb-6 text-2xl flex items-center gap-2">
-                <svg class="w-6 h-6 text-neon-pink" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-                Analítica de Mercado (30 KPIs)
-            </h3>
-
-            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4 mb-8">
-                <template x-for="stat in advancedStats">
-                    <div
-                        class="p-4 rounded-xl bg-gray-900/40 border border-gray-800 hover:border-neon-blue/30 transition-all group">
-                        <p class="text-[10px] text-gray-500 uppercase tracking-wider group-hover:text-neon-blue transition-colors"
-                            x-text="stat.label"></p>
-                        <p class="text-lg font-bold font-mono mt-1" :class="stat.c" x-text="stat.val"></p>
-                        <p x-show="stat.sub" class="text-xs text-gray-400 mt-1 truncate font-medium" x-text="stat.sub">
-                        </p>
-                    </div>
-                </template>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                <div class="glass-panel p-6 rounded-xl">
-                    <h3 class="text-white font-bold mb-4">Patrimonio vs Tiempo</h3>
-                    <canvas id="patrimonyChart" height="200"></canvas>
-                </div>
-                <div class="glass-panel p-6 rounded-xl">
-                    <h3 class="text-white font-bold mb-4">Ingresos por Premios</h3>
-                    <canvas id="rewardsChart" height="200"></canvas>
-                </div>
-            </div>
-
-            <div class="glass-panel p-6 rounded-xl">
-                <h3 class="text-white font-bold mb-6 text-lg">Top 10 Fichajes Más Caros</h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm">
-                        <thead class="text-xs uppercase text-gray-500 bg-gray-900/20">
-                            <tr>
-                                <th class="p-3">Jugador</th>
-                                <th class="p-3">Comprador</th>
-                                <th class="p-3">Vendedor</th>
-                                <th class="p-3 text-right">Precio</th>
-                                <th class="p-3 text-right">Fecha</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-800">
-                            <template x-for="mov in getTopTransfers()" :key="mov.id">
-                                <tr class="hover:bg-white/5">
-                                    <td class="p-3 text-white font-medium" x-text="mov.player"></td>
-                                    <td class="p-3 text-blue-300" x-text="mov.buyer"></td>
-                                    <td class="p-3 text-red-300" x-text="mov.seller"></td>
-                                    <td class="p-3 text-right font-mono text-neon-green"
-                                        x-text="formatMoney(mov.amount)"></td>
-                                    <td class="p-3 text-right text-gray-500 text-xs" x-text="mov.date"></td>
+                    <div class="glass-card overflow-hidden">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-900 border-b border-slate-700">
+                                <tr class="text-slate-400 text-xs uppercase">
+                                    <th class="p-4">Jugador</th>
+                                    <th class="p-4">Estado / Dueño</th>
+                                    <th class="p-4 text-right">Valor Mercado</th>
+                                    <th class="p-4 text-right">Coste Adquisición</th>
+                                    <th class="p-4 text-right">Diff</th>
                                 </tr>
-                            </template>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800">
+                                <template x-for="p in filteredPlayers.slice(0, 150)" :key="p.name">
+                                    <tr class="hover:bg-slate-800/50 transition-colors">
+                                        <td class="p-4 font-medium text-white" x-text="p.name"></td>
+                                        <td class="p-4">
+                                            <span x-show="p.owner"
+                                                class="px-2 py-1 rounded bg-blue-900/40 text-blue-300 text-xs border border-blue-800"
+                                                x-text="p.owner"></span>
+                                            <span x-show="!p.owner" class="text-slate-600 text-xs italic">Libre
+                                                (Mercado)</span>
+                                        </td>
+                                        <td class="p-4 text-right font-mono text-green-400"
+                                            x-text="formatMoney(p.value)"></td>
+                                        <td class="p-4 text-right text-slate-500 text-xs"
+                                            x-text="p.cost ? formatMoney(p.cost) : '-'"></td>
+                                        <td class="p-4 text-right text-xs"
+                                            :class="p.value - p.cost > 0 ? 'text-green-500' : 'text-red-500'"
+                                            x-text="p.cost ? formatMoney(p.value - p.cost) : '-'"></td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                        <div class="p-4 text-center text-slate-600 text-xs">Mostrando <span
+                                x-text="Math.min(150, filteredPlayers.length)"></span> de <span
+                                x-text="filteredPlayers.length"></span> jugadores</div>
+                    </div>
                 </div>
-            </div>
-        </div>
 
-        <!-- ADVANCED METRICS VIEW -->
-        <div x-show="currentTab === 'advanced'" x-transition.opacity class="space-y-8">
-            <h2 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-neon-pink to-yellow-400">
-                📊 Métricas de Mercado & ROI</h2>
+                <!-- MOVIMIENTOS -->
+                <div x-show="currentView === 'movimientos'" class="space-y-6" x-transition.opacity>
+                    <div class="glass-card p-4 grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <input type="text" x-model="filters.search" placeholder="🔍 Buscar..."
+                            class="bg-slate-800 border-slate-700 rounded-lg text-white p-2 outline-none focus:ring-1 focus:ring-blue-500">
+                        <select x-model="filters.team"
+                            class="bg-slate-800 border-slate-700 rounded-lg text-white p-2 outline-none">
+                            <option value="all">Todos los Equipos</option>
+                            <template x-for="(m, name) in managers" :key="name">
+                                <option :value="name" x-text="name"></option>
+                            </template>
+                        </select>
+                        <select x-model="filters.type"
+                            class="bg-slate-800 border-slate-700 rounded-lg text-white p-2 outline-none">
+                            <option value="all">Todos los tipos</option>
+                            <option value="transfer">Traspasos</option>
+                            <option value="market">Mercado</option>
+                            <option value="clause">Cláusulas</option>
+                            <option value="reward">Premios</option>
+                        </select>
+                        <div class="text-right text-xs text-slate-500 flex items-center justify-end"><span
+                                x-text="filteredMovements.length"></span> resultados</div>
+                    </div>
 
-            <!-- Manager Analysis -->
-            <div class="glass-panel p-6 rounded-xl">
-                <h3 class="text-lg font-bold mb-4 text-white">Rendimiento por Manager</h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm text-left text-gray-400">
-                        <thead class="text-xs uppercase bg-gray-800 text-neon-blue">
-                            <tr>
-                                <th class="px-4 py-3">Manager</th>
-                                <th class="px-4 py-3 text-right">Inversión Total</th>
-                                <th class="px-4 py-3 text-right">Ventas Totales</th>
-                                <th class="px-4 py-3 text-right">Beneficio Cerrado</th>
-                                <th class="px-4 py-3 text-right">Valor Plantilla Actual</th>
-                                <th class="px-4 py-3 text-right">Beneficio Latente</th>
-                                <th class="px-4 py-3 text-right">ROI (Realizado + Latente)</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template x-for="stat in marketValuation" :key="stat.name">
-                                <tr class="border-b border-gray-800 hover:bg-gray-800/50">
-                                    <td class="px-4 py-3 font-medium text-white" x-text="stat.name"></td>
-                                    <td class="px-4 py-3 text-right"
-                                        x-text="formatMoney(tradingHistory.managerStats[stat.name]?.buys || 0)"></td>
-                                    <td class="px-4 py-3 text-right"
-                                        x-text="formatMoney(tradingHistory.managerStats[stat.name]?.sales || 0)"></td>
-                                    <td class="px-4 py-3 text-right"
-                                        :class="(tradingHistory.managerStats[stat.name]?.profit || 0) > 0 ? 'text-green-400' : 'text-red-400'"
-                                        x-text="formatMoney(tradingHistory.managerStats[stat.name]?.profit || 0)"></td>
-                                    <td class="px-4 py-3 text-right text-yellow-300"
-                                        x-text="formatMoney(stat.marketValue)"></td>
-                                    <td class="px-4 py-3 text-right"
-                                        :class="stat.unrealizedProfit > 0 ? 'text-green-400' : 'text-red-400'"
-                                        x-text="formatMoney(stat.unrealizedProfit)"></td>
-                                    <td class="px-4 py-3 text-right font-bold">
-                                        <span
-                                            x-text="((((tradingHistory.managerStats[stat.name]?.profit || 0) + stat.unrealizedProfit) / ((tradingHistory.managerStats[stat.name]?.buys || 1) + 1)) * 100).toFixed(1) + '%'"></span>
-                                    </td>
+                    <div class="glass-card overflow-hidden">
+                        <table class="w-full">
+                            <thead class="bg-slate-900 text-xs uppercase text-slate-400">
+                                <tr>
+                                    <th class="p-3">Fecha</th>
+                                    <th class="p-3">Tipo</th>
+                                    <th class="p-3">Descripción</th>
+                                    <th class="p-3 text-right">Importe</th>
                                 </tr>
-                            </template>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800">
+                                <template x-for="m in filteredMovements.slice(0, 200)" :key="m.id">
+                                    <tr class="hover:bg-slate-800/50">
+                                        <td class="p-3 text-slate-400 text-xs whitespace-nowrap" x-text="m.date"></td>
+                                        <td class="p-3">
+                                            <span class="px-2 py-1 rounded text-[10px] font-bold uppercase" :class="{
+                                                    'bg-green-900/50 text-green-300': m.type === 'transfer' && m.amount > 0,
+                                                    'bg-red-900/50 text-red-300': m.type === 'transfer' && m.amount < 0,
+                                                    'bg-blue-900/50 text-blue-300': m.type === 'shield',
+                                                    'bg-yellow-900/50 text-yellow-300': m.type === 'reward'
+                                                }" x-text="m.type === 'transfer' ? 'Fichaje' : m.type"></span>
+                                        </td>
+                                        <td class="p-3 text-sm text-slate-200">
+                                            <div class="font-bold" x-text="m.player"></div>
+                                            <div class="text-xs text-slate-500 flex items-center gap-2">
+                                                <span x-text="m.seller"></span> <i
+                                                    class="fas fa-arrow-right text-[10px]"></i> <span
+                                                    x-text="m.buyer"></span>
+                                            </div>
+                                        </td>
+                                        <td class="p-3 text-right font-mono text-white" x-text="formatMoney(m.amount)">
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
 
-            <!-- Top Deals Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Best Deals -->
-                <div class="glass-panel p-6 rounded-xl">
-                    <h3 class="text-lg font-bold mb-4 text-green-400">🔥 Top 10 Mejores Negocios (Cerrados)</h3>
-                    <div class="space-y-3">
-                        <template x-for="(deal, idx) in bestDeals.slice(0, 10)" :key="idx">
-                            <div
-                                class="flex justify-between items-center p-2 bg-gray-800/30 rounded border border-gray-700/50">
-                                <div>
-                                    <div class="font-bold text-white" x-text="deal.player"></div>
-                                    <div class="text-xs text-gray-500" x-text="deal.manager + ' • ' + deal.date"></div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-green-400 font-bold" x-text="'+' + formatMoney(deal.profit)"></div>
-                                    <div class="text-xs text-gray-400" x-text="'ROI: ' + deal.roi.toFixed(1) + '%'">
+                <!-- NEGOCIOS -->
+                <div x-show="currentView === 'negocios'" class="space-y-6" x-transition.opacity>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <div class="glass-card p-6">
+                            <h3 class="text-lg font-bold text-green-400 mb-4"><i
+                                    class="fas fa-chart-line mr-2"></i>Mejores "Flips" (Profit)</h3>
+                            <div class="space-y-3">
+                                <template x-for="(deal, i) in bestDeals.slice(0,10)" :key="i">
+                                    <div
+                                        class="flex items-center justify-between p-3 bg-slate-800/40 rounded-lg border border-slate-700/50 hover:bg-slate-800 transition-colors">
+                                        <div class="flex items-center gap-3">
+                                            <div class="text-green-500 font-bold text-lg w-6 text-center" x-text="i+1">
+                                            </div>
+                                            <div>
+                                                <div class="font-bold text-white" x-text="deal.player"></div>
+                                                <div class="text-xs text-slate-400" x-text="deal.manager"></div>
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="font-mono text-green-400 font-bold"
+                                                x-text="'+' + formatMoney(deal.profit)"></div>
+                                            <div class="text-xs text-slate-500" x-text="deal.roi.toFixed(0) + '% ROI'">
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
+                                </template>
                             </div>
-                        </template>
-                    </div>
-                </div>
+                        </div>
 
-                <!-- Worst Deals -->
-                <div class="glass-panel p-6 rounded-xl">
-                    <h3 class="text-lg font-bold mb-4 text-red-400">📉 Top 10 Peores Negocios (Cerrados)</h3>
-                    <div class="space-y-3">
-                        <template x-for="(deal, idx) in worstDeals.slice(0, 10)" :key="idx">
-                            <div
-                                class="flex justify-between items-center p-2 bg-gray-800/30 rounded border border-gray-700/50">
-                                <div>
-                                    <div class="font-bold text-white" x-text="deal.player"></div>
-                                    <div class="text-xs text-gray-500" x-text="deal.manager + ' • ' + deal.date"></div>
-                                </div>
-                                <div class="text-right">
-                                    <div class="text-red-400 font-bold" x-text="formatMoney(deal.profit)"></div>
-                                    <div class="text-xs text-gray-400" x-text="'Compra: ' + formatMoney(deal.buyPrice)">
+                        <div class="glass-card p-6">
+                            <h3 class="text-lg font-bold text-red-400 mb-4"><i
+                                    class="fas fa-level-down-alt mr-2"></i>Peores "Ruinas" (Loss)</h3>
+                            <div class="space-y-3">
+                                <template x-for="(deal, i) in worstDeals.slice(0,10)" :key="i">
+                                    <div
+                                        class="flex items-center justify-between p-3 bg-slate-800/40 rounded-lg border border-slate-700/50 hover:bg-slate-800 transition-colors">
+                                        <div class="flex items-center gap-3">
+                                            <div class="text-red-500 font-bold text-lg w-6 text-center" x-text="i+1">
+                                            </div>
+                                            <div>
+                                                <div class="font-bold text-white" x-text="deal.player"></div>
+                                                <div class="text-xs text-slate-400" x-text="deal.manager"></div>
+                                            </div>
+                                        </div>
+                                        <div class="text-right">
+                                            <div class="font-mono text-red-500 font-bold"
+                                                x-text="formatMoney(deal.profit)"></div>
+                                            <div class="text-xs text-slate-500">Pérdida</div>
+                                        </div>
                                     </div>
-                                </div>
+                                </template>
                             </div>
-                        </template>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- Most Expensive Lists -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Top Sales -->
-                <div class="glass-panel p-6 rounded-xl">
-                    <h3 class="text-lg font-bold mb-4 text-neon-blue">💰 Top 15 Ventas Más Caras</h3>
-                    <div class="max-h-96 overflow-y-auto pr-2">
-                        <ul class="space-y-2">
-                            <template x-for="(mov, idx) in topSales.slice(0, 15)" :key="idx">
-                                <li class="flex justify-between text-sm border-b border-gray-800 pb-1">
-                                    <span class="text-gray-300"><span x-text="idx+1"></span>. <span x-text="mov.player"
-                                            class="font-bold text-white"></span> <span class="text-xs text-gray-500"
-                                            x-text="'(' + mov.seller + ')'"></span></span>
-                                    <span class="text-neon-blue font-mono" x-text="formatMoney(mov.amount)"></span>
-                                </li>
+                <!-- IMPORT (Magic Parser) -->
+                <div x-show="currentView === 'importar'" class="space-y-6" x-transition.opacity>
+                    <div class="glass-card p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-lg font-bold text-white">Importador Inteligente</h2>
+                            <button @click="processInput()"
+                                class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-bold text-sm">
+                                <i class="fas fa-bolt mr-2"></i> Procesar
+                            </button>
+                        </div>
+                        <textarea x-model="rawInput"
+                            class="w-full bg-slate-900/80 text-slate-300 p-4 rounded-lg font-mono text-xs border border-slate-700 focus:border-blue-500 outline-none h-64"
+                            placeholder="Pega aquí el HTML completo de Mercado, o las líneas de texto de Movimientos..."></textarea>
+
+                        <div
+                            class="mt-4 bg-black/40 p-4 rounded-lg font-mono text-xs h-48 overflow-y-auto border border-slate-800/50">
+                            <template x-for="log in logs" :key="log.id">
+                                <div class="mb-1 border-l-2 pl-2" :class="{
+                                    'border-green-500 text-green-400': log.type === 'success',
+                                    'border-red-500 text-red-400': log.type === 'error',
+                                    'border-yellow-500 text-yellow-300': log.type === 'warning',
+                                    'border-blue-500 text-slate-400': log.type === 'info'
+                                }">
+                                    <span x-text="log.message"></span>
+                                </div>
                             </template>
-                        </ul>
+                        </div>
                     </div>
                 </div>
-                <!-- Top Compras -->
-                <div class="glass-panel p-6 rounded-xl">
-                    <h3 class="text-lg font-bold mb-4 text-neon-pink">💎 Top 15 Compras Más Caras</h3>
-                    <div class="max-h-96 overflow-y-auto pr-2">
-                        <ul class="space-y-2">
-                            <template x-for="(mov, idx) in topPurchases.slice(0, 15)" :key="idx">
-                                <li class="flex justify-between text-sm border-b border-gray-800 pb-1">
-                                    <span class="text-gray-300"><span x-text="idx+1"></span>. <span x-text="mov.player"
-                                            class="font-bold text-white"></span> <span class="text-xs text-gray-500"
-                                            x-text="'(' + mov.buyer + ')'"></span></span>
-                                    <span class="text-neon-pink font-mono" x-text="formatMoney(mov.amount)"></span>
-                                </li>
-                            </template>
-                        </ul>
-                    </div>
-                </div>
+
             </div>
+        </main>
+    </div>
 
-        </div>
-
-    </main>
-
-    <!-- LOGIC -->
     <script>
-        // CONFIGURACIÓN DE FIREBASE (PRODUCCIÓN)
-        const firebaseConfig = {
-            apiKey: "AIzaSyBzlYu7dTaEvIIt7VehdhVwqOLS2BLnqDQ",
-            authDomain: "mercato-fbdcc.firebaseapp.com",
-            databaseURL: "https://mercato-fbdcc-default-rtdb.firebaseio.com",
-            projectId: "mercato-fbdcc",
-            storageBucket: "mercato-fbdcc.firebasestorage.app",
-            messagingSenderId: "865841758007",
-            appId: "1:865841758007:web:ac53121bc37d00574864b2",
-            measurementId: "G-0WQNPFTYNF"
-        };
-
-        let db = null;
-        let dbRef = null;
-
-        // Intentar inicializar Firebase
-        try {
-            firebase.initializeApp(firebaseConfig);
-            db = firebase.database();
-            console.log("Firebase initialized successfully with Realtime Database");
-        } catch (e) {
-            console.error("Firebase load error", e);
-        }
-
         function gamePlayApp() {
             return {
-                currentTab: 'dashboard',
-                rawInput: '',
-                clauseBulkInput: '',
-                clauseForm: { manager: '', amount: '' },
-                logs: [],
+                collapsed: false,
+                currentView: 'dashboard',
+                navItems: [
+                    { id: 'dashboard', label: 'Dashboard', icon: 'fas fa-home' },
+                    { id: 'clasificacion', label: 'Clasificación', icon: 'fas fa-ranking-star' },
+                    { id: 'jugadores', label: 'Mercado & Jugadores', icon: 'fas fa-users' },
+                    { id: 'movimientos', label: 'Movimientos', icon: 'fas fa-exchange-alt' },
+                    { id: 'negocios', label: 'Negocios', icon: 'fas fa-briefcase' },
+                    { id: 'importar', label: 'Importar / Config', icon: 'fas fa-cogs' }
+                ],
 
-                // DATA MODEL
-                isRemoteUpdate: false, // Flag to prevent circular updates
                 managers: {
                     "Vigar FC": { initialBudget: 103000000, teamValue: 0, clauseExpenses: 0, name: "Vigar FC" },
                     "GOLENCIERRO FC": { initialBudget: 103000000, teamValue: 0, clauseExpenses: 0, name: "GOLENCIERRO FC" },
                     "Pablinistan FC": { initialBudget: 103000000, teamValue: 0, clauseExpenses: 0, name: "Pablinistan FC" },
                     "Alcatamy eSports By": { initialBudget: 100000000, teamValue: 0, clauseExpenses: 0, name: "Alcatamy eSports By" },
-                    "Visite La Manga FC": { initialBudget: 103000000, teamValue: 0, clauseExpenses: 0, name: "Visite La Manga FC" },
-                    "Morenazos FC": { initialBudget: 103000000, teamValue: 0, clauseExpenses: 0, name: "Morenazos FC" }
+                    "Visite La Manga FC": { initialBudget: 100000000, teamValue: 0, clauseExpenses: 0, name: "Visite La Manga FC" },
+                    "Morenazos FC": { initialBudget: 100000000, teamValue: 0, clauseExpenses: 0, name: "Morenazos FC" }
                 },
-                movements: [], // Array flat de todos los movimientos
-                pendingMovements: [], // Staging area
+                movements: [],
+                pendingMovements: [],
                 marketData: typeof MARKET_DATA !== 'undefined' ? MARKET_DATA : {},
-                filters: {
-                    search: '',
-                    team: 'all',
-                    type: 'all'
-                },
+                logs: [],
+
                 tradingHistory: { closedDeals: [], rosters: {}, managerStats: {} },
 
+                filters: { search: '', team: 'all', type: 'all' },
+                playerFilters: { search: '', owner: 'all', sort: 'value_desc' },
+                rawInput: '',
+
+                // COMPUTED
                 get filteredMovements() {
                     return this.movements.filter(m => {
-                        const search = this.filters.search.toLowerCase();
-                        const matchesSearch = !search ||
-                            m.player.toLowerCase().includes(search) ||
-                            m.buyer.toLowerCase().includes(search) ||
-                            m.seller.toLowerCase().includes(search);
-                        const matchesTeam = this.filters.team === 'all' || m.buyer === this.filters.team || m.seller === this.filters.team;
-                        const matchesType = this.filters.type === 'all' || m.type === this.filters.type;
-                        return matchesSearch && matchesTeam && matchesType;
-                    });
+                        const s = this.filters.search.toLowerCase();
+                        const matchSearch = !s || m.player.toLowerCase().includes(s) || m.buyer.toLowerCase().includes(s) || m.seller.toLowerCase().includes(s);
+                        const matchTeam = this.filters.team === 'all' || m.buyer === this.filters.team || m.seller === this.filters.team;
+                        const matchType = this.filters.type === 'all' ||
+                            (this.filters.type === 'transfer' && m.type === 'transfer') ||
+                            (this.filters.type === 'market' && (m.buyer === 'Mercado' || m.seller === 'Mercado')) ||
+                            (this.filters.type === 'reward' && m.type === 'reward') ||
+                            (this.filters.type === 'clause' && m.type === 'shield');
+                        return matchSearch && matchTeam && matchType;
+                    }).sort((a, b) => this.parseDate(b.date) - this.parseDate(a.date));
                 },
 
-                reconstructTradingHistory() {
-                    const sorted = [...this.movements].sort((a, b) => this.parseDate(a.date) - this.parseDate(b.date));
-                    const rosters = {};
-                    const closedDeals = [];
-                    const managerStats = {};
-
-                    Object.keys(this.managers).forEach(m => {
-                        rosters[m] = {};
-                        managerStats[m] = { name: m, buys: 0, sales: 0, profit: 0, dealsCount: 0 };
-                    });
-
-                    sorted.forEach(m => {
-                        const amt = parseInt(m.amount) || 0;
-                        if (m.type === 'transfer') {
-                            if (rosters[m.seller] && rosters[m.seller][m.player]) {
-                                const cost = rosters[m.seller][m.player].cost;
-                                const profit = amt - cost;
-                                const roi = cost > 0 ? (profit / cost) * 100 : 0;
-                                closedDeals.push({ player: m.player, manager: m.seller, buyPrice: cost, sellPrice: amt, profit, roi, date: m.date });
-                                if (managerStats[m.seller]) {
-                                    managerStats[m.seller].sales += amt;
-                                    managerStats[m.seller].profit += profit;
-                                    managerStats[m.seller].dealsCount++;
-                                }
-                                delete rosters[m.seller][m.player];
-                            } else if (managerStats[m.seller]) {
-                                managerStats[m.seller].sales += amt;
-                            }
-                            if (managerStats[m.buyer]) {
-                                if (!rosters[m.buyer]) rosters[m.buyer] = {};
-                                rosters[m.buyer][m.player] = { cost: amt, date: m.date };
-                                managerStats[m.buyer].buys += amt;
-                            }
-                        }
-                    });
-                    this.tradingHistory = { closedDeals, rosters, managerStats };
-                },
-                get topSales() { return [...this.movements].filter(m => m.type === 'transfer').sort((a, b) => parseInt(b.amount) - parseInt(a.amount)).slice(0, 50); },
-                get topPurchases() { return this.topSales; },
-                get bestDeals() { if (!this.tradingHistory.closedDeals.length) this.reconstructTradingHistory(); return [...this.tradingHistory.closedDeals].sort((a, b) => b.profit - a.profit).slice(0, 50); },
-                get worstDeals() { if (!this.tradingHistory.closedDeals.length) this.reconstructTradingHistory(); return [...this.tradingHistory.closedDeals].sort((a, b) => a.profit - b.profit).slice(0, 50); },
                 get marketValuation() {
                     if (!Object.keys(this.tradingHistory.rosters).length) this.reconstructTradingHistory();
+
+                    // First calculate initial balances
+                    const balances = {};
+                    Object.values(this.managers).forEach(m => balances[m.name] = m.initialBudget - (m.clauseExpenses || 0));
+
+                    // Process balances
+                    this.movements.forEach(m => {
+                        const amt = parseInt(m.amount) || 0;
+                        if (m.type === 'transfer') {
+                            if (balances[m.buyer] !== undefined) balances[m.buyer] -= amt;
+                            if (balances[m.seller] !== undefined) balances[m.seller] += amt;
+                        } else if (m.type === 'reward' && balances[m.beneficiary] !== undefined) {
+                            balances[m.beneficiary] += amt;
+                        }
+                    });
+
                     return Object.keys(this.tradingHistory.rosters).map(mgr => {
-                        let totalValue = 0;
-                        let totalInvested = 0;
                         const roster = this.tradingHistory.rosters[mgr];
+                        let val = 0;
+                        let inv = 0;
                         Object.keys(roster).forEach(pName => {
-                            let val = this.marketData[pName] || 0;
-                            if (val === 0) { const found = Object.keys(this.marketData).find(k => k.includes(pName) || pName.includes(k)); if (found) val = this.marketData[found]; }
-                            totalValue += val;
-                            totalInvested += roster[pName].cost;
+                            let v = this.marketData[pName] || 0;
+                            if (v === 0) {
+                                // Fuzzy match
+                                const match = Object.keys(this.marketData).find(k => k.toLowerCase() === pName.toLowerCase() || k.includes(pName) || pName.includes(k));
+                                if (match) v = this.marketData[match];
+                            }
+                            val += v;
+                            inv += roster[pName].cost;
                         });
-                        return { name: mgr, marketValue: totalValue, invested: totalInvested, unrealizedProfit: totalValue - totalInvested };
-                    });
-                },
 
-                async initApp() {
-                    // Initialize debouncers
-                    this.debouncedSaveData = this.debounce(() => this.saveData(), 2000);
-                    this.debouncedUpdateCharts = this.debounce(() => this.updateCharts(), 2000);
-
-                    this.loadData();
-
-                    this.$watch('managers', () => {
-                        if (!this.isRemoteUpdate) this.debouncedSaveData();
-                    });
-                    this.$watch('movements', () => {
-                        if (!this.isRemoteUpdate) this.debouncedSaveData();
-                        this.debouncedUpdateCharts();
-                    });
-                },
-
-                // UTILS
-                debounce(func, wait) {
-                    let timeout;
-                    return (...args) => {
-                        const later = () => {
-                            clearTimeout(timeout);
-                            func.apply(this, args);
+                        return {
+                            name: mgr,
+                            marketValue: val,
+                            invested: inv,
+                            unrealizedProfit: val - inv,
+                            balance: balances[mgr] || 0
                         };
-                        clearTimeout(timeout);
-                        timeout = setTimeout(later, wait);
-                    };
+                    });
+                },
+
+                get bestDeals() { return [...this.tradingHistory.closedDeals].sort((a, b) => b.profit - a.profit); },
+                get worstDeals() { return [...this.tradingHistory.closedDeals].sort((a, b) => a.profit - b.profit); },
+
+                get filteredPlayers() {
+                    if (!Object.keys(this.tradingHistory.rosters).length) this.reconstructTradingHistory();
+
+                    const ownedPlayers = {};
+                    Object.keys(this.tradingHistory.rosters).forEach(mgr => {
+                        Object.keys(this.tradingHistory.rosters[mgr]).forEach(pName => {
+                            ownedPlayers[pName] = { owner: mgr, cost: this.tradingHistory.rosters[mgr][pName].cost };
+                        });
+                    });
+
+                    let allPlayers = Object.keys(this.marketData).map(name => ({
+                        name: name,
+                        value: this.marketData[name],
+                        owner: ownedPlayers[name]?.owner || null,
+                        cost: ownedPlayers[name]?.cost || 0
+                    }));
+
+                    // Add missing owned players
+                    Object.keys(ownedPlayers).forEach(pName => {
+                        if (!this.marketData[pName]) {
+                            allPlayers.push({ name: pName, value: 0, owner: ownedPlayers[pName].owner, cost: ownedPlayers[pName].cost });
+                        }
+                    });
+
+                    return allPlayers.filter(p => {
+                        const s = this.playerFilters.search.toLowerCase();
+                        const matchSearch = !s || p.name.toLowerCase().includes(s);
+                        const matchOwner = this.playerFilters.owner === 'all' ||
+                            (this.playerFilters.owner === 'owned' && p.owner) ||
+                            (this.playerFilters.owner === 'free' && !p.owner);
+                        return matchSearch && matchOwner;
+                    }).sort((a, b) => {
+                        if (this.playerFilters.sort === 'value_desc') return b.value - a.value;
+                        if (this.playerFilters.sort === 'value_asc') return a.value - b.value;
+                        if (this.playerFilters.sort === 'cost_desc') return (b.cost || 0) - (a.cost || 0);
+                        return 0;
+                    });
+                },
+
+                // METHODS
+                async initApp() {
+                    const saved = localStorage.getItem('fantasy_gameplay_data');
+                    if (saved) {
+                        try {
+                            const parsed = JSON.parse(saved);
+                            this.movements = parsed.movements || [];
+                            // Initial migration of managers if needed
+                            if (parsed.managers) {
+                                Object.keys(this.managers).forEach(k => {
+                                    if (parsed.managers[k]) {
+                                        this.managers[k].teamValue = parsed.managers[k].teamValue;
+                                        this.managers[k].clauseExpenses = parsed.managers[k].clauseExpenses;
+                                    }
+                                });
+                            }
+                            if (parsed.marketData) this.marketData = parsed.marketData;
+                            this.addLog('Datos cargados de memoria', 'success');
+                        } catch (e) { console.error(e); }
+                    }
+                    this.reconstructTradingHistory();
+
+                    this.$watch('movements', () => { this.debouncedSaveData(); this.reconstructTradingHistory(); });
+                    this.$watch('marketData', () => { this.debouncedSaveData(); this.reconstructTradingHistory(); });
                 },
 
                 formatMoney(amount) {
@@ -872,247 +626,164 @@
                 },
 
                 addLog(msg, type = 'info') {
-                    const time = new Date().toLocaleTimeString();
-                    this.logs.unshift({ id: Date.now(), time, msg, type });
+                    this.logs.unshift({ id: Date.now(), message: msg, type, timestamp: Date.now() });
                 },
 
-                // CALCS
-                calculateTotalBalance() {
-                    return Object.values(this.managers).reduce((acc, m) => acc + m.balance, 0);
-                },
-                calculateTotalTeamValue() {
-                    return Object.values(this.managers).reduce((acc, m) => acc + m.teamValue, 0);
-                },
-                calculateTotalClauses() {
-                    return Object.values(this.managers).reduce((acc, m) => acc + m.clauseExpenses, 0);
-                },
-                calculateMaxBid(manager) {
-                    // Formula: Saldo + (ValorEquipo * 0.20)
-                    return manager.balance + (manager.teamValue * 0.20);
-                },
+                // CORE LOGIC V2
+                reconstructTradingHistory() {
+                    // Sorting crucial for replay
+                    const sorted = [...this.movements].sort((a, b) => this.parseDate(a.date) - this.parseDate(b.date));
+                    const rosters = {};
+                    const managerStats = {};
+                    const closedDeals = [];
 
-                get sortedManagers() {
-                    // ⚡ OPTIMIZADO: Calcular todos los balances en UNA SOLA pasada O(n)
-                    // en lugar de O(n*m) que bloqueaba el navegador
-
-                    // Inicializar balances con presupuesto inicial - cláusulas
-                    const balances = {};
-                    Object.values(this.managers).forEach(m => {
-                        balances[m.name] = m.initialBudget - m.clauseExpenses;
+                    Object.keys(this.managers).forEach(m => {
+                        rosters[m] = {};
+                        managerStats[m] = { profit: 0, sales: 0, buys: 0 };
                     });
 
-                    // Una sola pasada por todos los movimientos
-                    this.movements.forEach(mov => {
-                        if (mov.type === 'transfer') {
-                            if (balances[mov.buyer] !== undefined) balances[mov.buyer] -= mov.amount;
-                            if (balances[mov.seller] !== undefined) balances[mov.seller] += mov.amount;
-                        } else if (mov.type === 'reward' && balances[mov.beneficiary] !== undefined) {
-                            balances[mov.beneficiary] += mov.amount;
-                        }
-                    });
-
-                    // Crear array con balances calculados
-                    const computedManagers = Object.values(this.managers).map(m => ({
-                        ...m,
-                        balance: balances[m.name] || 0
-                    }));
-
-                    // Ordenar por patrimonio (balance + teamValue)
-                    return computedManagers.sort((a, b) => (b.balance + b.teamValue) - (a.balance + a.teamValue));
-                },
-
-                get advancedStats() {
-                    let s = {
-                        totalSpent: 0, totalIncome: 0,
-                        opsTotal: 0, opsLiga: 0, opsInter: 0,
-                        maxTransfer: { p: '-', a: 0 }, maxSale: { p: '-', a: 0 },
-                        playerCounts: {}, managerStats: {},
-                        rewardsJ: 0, rewards11: 0
-                    };
-
-                    // Init managers stats
-                    Object.keys(this.managers).forEach(k => s.managerStats[k] = { buy: 0, sell: 0, ops: 0, rewards: 0 });
-
-                    this.movements.forEach(m => {
+                    sorted.forEach(m => {
+                        const amt = parseInt(m.amount) || 0;
                         if (m.type === 'transfer') {
-                            s.opsTotal++;
-                            if (m.buyer === 'LALIGA' || m.seller === 'LALIGA') s.opsLiga++;
-                            else s.opsInter++;
+                            // Seller
+                            if (this.managers[m.seller] || rosters[m.seller]) {
+                                if (!rosters[m.seller]) rosters[m.seller] = {};
 
-                            if (m.buyer !== 'LALIGA') {
-                                s.totalSpent += m.amount;
-                                if (s.managerStats[m.buyer]) { s.managerStats[m.buyer].buy += m.amount; s.managerStats[m.buyer].ops++; }
+                                if (rosters[m.seller][m.player]) {
+                                    const buyPrice = rosters[m.seller][m.player].cost;
+                                    const profit = amt - buyPrice;
+                                    const roi = buyPrice > 0 ? (profit / buyPrice) * 100 : 0;
+                                    closedDeals.push({ player: m.player, manager: m.seller, buyPrice, sellPrice: amt, profit, roi, date: m.date });
+                                    if (managerStats[m.seller]) managerStats[m.seller].profit += profit;
+                                    delete rosters[m.seller][m.player];
+                                }
                             }
-                            if (m.seller !== 'LALIGA') {
-                                s.totalIncome += m.amount;
-                                if (s.managerStats[m.seller]) { s.managerStats[m.seller].sell += m.amount; s.managerStats[m.seller].ops++; }
+                            // Buyer
+                            if (this.managers[m.buyer] || rosters[m.buyer]) {
+                                if (!rosters[m.buyer]) rosters[m.buyer] = {};
+                                rosters[m.buyer][m.player] = { cost: amt, date: m.date };
                             }
-
-                            // Max Records
-                            if (m.amount > s.maxTransfer.a && m.buyer !== 'LALIGA') s.maxTransfer = { p: m.player, a: m.amount, m: m.buyer };
-                            if (m.amount > s.maxSale.a && m.seller !== 'LALIGA') s.maxSale = { p: m.player, a: m.amount, m: m.seller };
-
-                            // Player popularity
-                            s.playerCounts[m.player] = (s.playerCounts[m.player] || 0) + 1;
-
-                        } else if (m.type === 'reward') {
-                            if (m.subtype === 'jornada') s.rewardsJ += m.amount;
-                            if (m.subtype === '11ideal') s.rewards11 += m.amount;
-                            if (s.managerStats[m.beneficiary]) s.managerStats[m.beneficiary].rewards += m.amount;
                         }
                     });
 
-                    // Calculated Stats
-                    const sortedManagersBySpent = Object.entries(s.managerStats).sort((a, b) => b[1].buy - a[1].buy);
-                    const sortedManagersByIncome = Object.entries(s.managerStats).sort((a, b) => b[1].sell - a[1].sell);
-                    const sortedPlayers = Object.entries(s.playerCounts).sort((a, b) => b[1] - a[1]);
-                    const mostActiveManager = Object.entries(s.managerStats).sort((a, b) => b[1].ops - a[1].ops)[0];
-
-                    // Profit/Loss Analysis (Simplified: Sold Price - Bought Price for same player same manager?)
-                    // Too complex for flat list without tracking ownership. Using general aggregates.
-
-                    return [
-                        // BLOQUE 1: MACROECONOMIA
-                        { label: 'Volumen Total Mercado', val: this.formatMoney(s.totalSpent + s.totalIncome), c: 'text-white' },
-                        { label: 'Gasto Total Managers', val: this.formatMoney(s.totalSpent), c: 'text-red-400' },
-                        { label: 'Ingresos Totales', val: this.formatMoney(s.totalIncome), c: 'text-green-400' },
-                        { label: 'Balance Neto Global', val: this.formatMoney(s.totalIncome - s.totalSpent), c: 'text-blue-400' },
-
-                        // BLOQUE 2: OPERATIVA
-                        { label: 'Total Operaciones', val: s.opsTotal, c: 'text-white' },
-                        { label: 'Ops con LALIGA', val: s.opsLiga, c: 'text-gray-400' },
-                        { label: 'Ops entre Managers', val: s.opsInter, c: 'text-neon-pink' },
-                        { label: 'Jugador Más Trasmferido', val: sortedPlayers[0] ? `${sortedPlayers[0][0]} (${sortedPlayers[0][1]})` : '-', c: 'text-yellow-300' },
-
-                        // BLOQUE 3: RECORDS
-                        { label: 'Fichaje Más Caro', val: this.formatMoney(s.maxTransfer.a), sub: s.maxTransfer.p, c: 'text-neon-green' },
-                        { label: 'Venta Más Cara', val: this.formatMoney(s.maxSale.a), sub: s.maxSale.p, c: 'text-neon-blue' },
-                        { label: 'Media Gasto/Fichaje', val: this.formatMoney(s.opsTotal ? s.totalSpent / s.opsTotal : 0), c: 'text-gray-300' },
-                        { label: 'Gasto en Cláusulas', val: this.formatMoney(this.calculateTotalClauses()), c: 'text-neon-purple' },
-
-                        // BLOQUE 4: RANKING MANAGERS
-                        { label: 'Mayor Comprador', val: sortedManagersBySpent[0]?.[0] || '-', sub: this.formatMoney(sortedManagersBySpent[0]?.[1].buy || 0), c: 'text-red-300' },
-                        { label: 'Mayor Vendedor', val: sortedManagersByIncome[0]?.[0] || '-', sub: this.formatMoney(sortedManagersByIncome[0]?.[1].sell || 0), c: 'text-green-300' },
-                        { label: 'Manager Más Activo', val: mostActiveManager?.[0] || '-', sub: `${mostActiveManager?.[1].ops || 0} ops`, c: 'text-blue-300' },
-                        { label: 'Menor Gasto', val: sortedManagersBySpent[sortedManagersBySpent.length - 1]?.[0] || '-', sub: this.formatMoney(sortedManagersBySpent[sortedManagersBySpent.length - 1]?.[1].buy || 0), c: 'text-gray-400' },
-
-                        // BLOQUE 5: PREMIOS
-                        { label: 'Total Premios Jornada', val: this.formatMoney(s.rewardsJ), c: 'text-yellow-400' },
-                        { label: 'Total Premios 11 Ideal', val: this.formatMoney(s.rewards11), c: 'text-yellow-200' },
-                        { label: 'Ratio Inversión/Valor', val: ((s.totalSpent / this.calculateTotalTeamValue()) * 100).toFixed(1) + '%', c: 'text-gray-400' },
-                        { label: 'Liquidez del Sistema', val: ((this.calculateTotalBalance() / (this.calculateTotalBalance() + this.calculateTotalTeamValue())) * 100).toFixed(1) + '%', c: 'text-gray-400' },
-
-                        // RANDOM / CURIOSITIES
-                        { label: 'Ticket Medio Venta', val: this.formatMoney(s.opsTotal ? s.totalIncome / s.opsTotal : 0), c: 'text-gray-500' },
-                        { label: 'Fichaje Record (Manager)', val: s.maxTransfer.m, c: 'text-xs text-gray-400' },
-                        { label: 'Venta Record (Manager)', val: s.maxSale.m, c: 'text-xs text-gray-400' },
-                        { label: 'Total Movimientos', val: this.movements.length, c: 'text-white' }
-                    ];
+                    this.tradingHistory = { closedDeals, rosters, managerStats };
                 },
 
-                getTopTransfers() {
-                    return this.movements
-                        .filter(m => m.type === 'transfer')
-                        .sort((a, b) => b.amount - a.amount)
-                        .slice(0, 50);
+                saveData() {
+                    localStorage.setItem('fantasy_gameplay_data', JSON.stringify({
+                        movements: this.movements,
+                        marketData: this.marketData,
+                        managers: this.managers,
+                        lastUpdate: Date.now()
+                    }));
+                },
+                debouncedSaveData() { clearTimeout(this._tm); this._tm = setTimeout(() => this.saveData(), 1000); },
+
+                parseDate(dateStr) {
+                    if (!dateStr || dateStr === 'NODATE') return 0;
+                    if (dateStr.match(/^\d{2}\/\d{2}\/\d{4}/)) {
+                        const [d, m, y] = dateStr.split(' ')[0].split('/');
+                        return new Date(y, m - 1, d).getTime();
+                    }
+                    return 0;
                 },
 
-                getTotalMovements() {
-                    return this.movements.length;
-                },
+                calculateTotalVolume() { return this.movements.reduce((acc, m) => acc + (parseInt(m.amount) || 0), 0); },
+                calculateMarketTotal() { return Object.values(this.marketData).reduce((a, b) => a + b, 0); },
 
-                // FILE IMPORT
-                importFromFile(event) {
-                    const file = event.target.files[0];
-                    if (!file) return;
+                // ROBUST PARSERS (FROM v1)
+                processInput() {
+                    const text = this.rawInput;
+                    if (!text.trim()) return;
 
-                    if (!file.name.endsWith('.txt')) {
-                        this.addLog('Error: Solo se permiten archivos .txt', 'warning');
+                    const startTime = performance.now();
+
+                    // HTML Detection
+                    if (text.includes('<html') || text.includes('MuiTypography') || text.includes('__NEXT_DATA__')) {
+                        this.parseMarketDataRegex(text); // Use Regex fallback for reliability
                         return;
                     }
 
-                    this.addLog(`Leyendo archivo: ${file.name}...`, 'info');
+                    const existingIds = new Set(this.movements.map(m => m.id));
+                    const pendingIds = new Set(this.pendingMovements.map(m => m.id));
+                    const lines = text.split('\n');
+                    let tempDate = null;
 
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        const content = e.target.result;
-                        const lineCount = content.split('\n').length;
-                        this.addLog(`Archivo cargado: ${lineCount} líneas`, 'success');
+                    // Regex Patterns
+                    const reSmartFormat = /^\[([^\]]+)\] (.+)/;
+                    const reDate = /(\d{2}\/\d{2}\/\d{4})/;
+                    const reTransfer = /(.+?) ha (comprado|vendido) al jugador (.+?) (?:de|a) (.+?) por ([\d\.]+)[€]?/;
+                    const reShield = /(.+?) ha blindado a (.+)/i;
+                    const reRewardJornada = /En la jornada (\d+), (.+?) ha ganado ([\d\.]+)[€]?/i;
+                    const reTeamValue = /([^\n]+)\s+(\d+)\s+PFSY\s+([\d\.]+)/; // Team value heuristic
 
-                        // Poner contenido en el textarea y procesarlo
-                        this.rawInput = content;
-                        this.processInput();
+                    const normalizeDate = (d) => {
+                        if (/^\d{1,2}:\d{2}$/.test(d)) {
+                            const today = new Date();
+                            return `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()} ${d}`;
+                        }
+                        return d || 'NODATE';
                     };
-                    reader.onerror = () => {
-                        this.addLog('Error al leer el archivo', 'warning');
-                    };
-                    reader.readAsText(file, 'UTF-8');
 
-                    // Reset input para permitir reimportar mismo archivo
-                    event.target.value = '';
-                },
+                    lines.forEach(line => {
+                        line = line.trim();
+                        if (!line || line.startsWith('#')) return;
 
-                // DATA PROCESSING
-                parseMarketData(htmlContent) {
-                    try {
-                        const parser = new DOMParser();
-                        const doc = parser.parseFromString(htmlContent, 'text/html');
-                        // Strategy: Look for specific class structures
-                        // Cards usually share a common class or structure. 
-                        // We found names in 'MuiTypography-body2' and price in 'MuiTypography-body1'.
+                        let dateKey = tempDate;
+                        let textToParse = line;
 
-                        const nameNodes = Array.from(doc.querySelectorAll('p[class*="MuiTypography-body2"]'));
-                        let updatedCount = 0;
+                        const smartMatch = line.match(reSmartFormat);
+                        if (smartMatch) { dateKey = smartMatch[1].trim(); textToParse = smartMatch[2]; }
+                        else if (reDate.test(line)) { tempDate = line.match(reDate)[1]; return; }
 
-                        nameNodes.forEach(node => {
-                            const name = node.textContent.trim();
-                            // Value is usually in the NEXT sibling container or similar structure.
-                            // Looking at the provided HTML structure:
-                            // Name is inside a div.
-                            // Market Value is inside the same parent container, usually a <p> with body1 class coming AFTER the name div.
+                        // Transfer
+                        let match = textToParse.match(reTransfer);
+                        if (match) {
+                            const [_, actor, action, player, other, amtStr] = match;
+                            const amount = parseInt(amtStr.replace(/\./g, ''));
+                            const buyer = action === 'comprado' ? actor.trim() : other.trim();
+                            const seller = action === 'comprado' ? other.trim() : actor.trim();
+                            const id = `transfer_${normalizeDate(dateKey)}_${buyer}_${seller}_${player}_${amount}`;
 
-                            // Traverse up to the card container might be safer, but let's try finding the next body1.
-                            // The HTML showed: <div>...<p name>...</div> <p value>...
-
-                            // Attempt to find value node in proximity
-                            // We can use a Regex on the `innerHTML` of the parent card to be safer if DOM traversal is tricky.
-                            // But let's try DOM traversal:
-                            // Go up to the card wrapper (usually contains the image, name, values)
-                            let cardParams = node.closest('div.MuiBox-root.css-1j0r1in') || node.parentElement.parentElement;
-
-                            if (cardParams) {
-                                const valueNode = cardParams.querySelector('p[class*="MuiTypography-body1"]');
-                                if (valueNode) {
-                                    const valStr = valueNode.textContent.replace(/[€\.]/g, '').trim();
-                                    const val = parseInt(valStr);
-                                    if (!isNaN(val)) {
-                                        this.marketData[name] = val;
-                                        updatedCount++;
-                                    }
-                                }
+                            if (!pendingIds.has(id) && !existingIds.has(id)) {
+                                pendingIds.add(id);
+                                this.pendingMovements.push({ id, type: 'transfer', buyer, seller, player, amount, date: normalizeDate(dateKey) });
                             }
-                        });
+                            return;
+                        }
 
-                        this.addLog(`Mercado actualizado: ${updatedCount} jugadores.`, 'success');
-                        this.debouncedSaveData();
-                        this.debouncedUpdateCharts(); // Recalc stats
+                        // Shield
+                        match = textToParse.match(reShield);
+                        if (match) {
+                            const id = `shield_${normalizeDate(dateKey)}_${match[1].trim()}_${match[2].trim()}`;
+                            if (!pendingIds.has(id) && !existingIds.has(id)) {
+                                pendingIds.add(id);
+                                this.pendingMovements.push({ id, type: 'shield', beneficiary: match[1].trim(), player: match[2].trim(), amount: 0, date: normalizeDate(dateKey) });
+                            }
+                            return;
+                        }
 
-                    } catch (e) {
-                        console.error(e);
-                        this.addLog('Error analizando HTML de mercado', 'error');
-                        // Fallback to Regex if DOM fails?
-                        this.parseMarketDataRegex(htmlContent);
-                    }
+                        // Reward
+                        match = textToParse.match(reRewardJornada);
+                        if (match) {
+                            const id = `reward_jor${match[1]}_${match[2].trim()}`;
+                            if (!pendingIds.has(id) && !existingIds.has(id)) {
+                                pendingIds.add(id);
+                                this.pendingMovements.push({ id, type: 'reward', subtype: 'jornada', beneficiary: match[2].trim(), amount: parseInt(match[3].replace(/\./g, '')), date: normalizeDate(dateKey) });
+                            }
+                        }
+                    });
+
+                    if (this.pendingMovements.length > 0) this.addLog(`Detectados ${this.pendingMovements.length} movimientos.`, 'info');
+                    else this.addLog('No se detectaron movimientos.', 'warning');
                 },
 
                 parseMarketDataRegex(text) {
-                    // Fallback Regex
                     const parts = text.split('class="MuiBox-root css-1j0r1in"');
                     let count = 0;
                     parts.forEach(part => {
                         const nameMatch = part.match(/MuiTypography-body2[^>]*>\s*([^<]+)<\/p>/);
                         const valMatch = part.match(/MuiTypography-body1[^>]*>\s*([\d\.]+) €<\/p>/);
-
                         if (nameMatch && valMatch) {
                             const name = nameMatch[1].trim();
                             const val = parseInt(valMatch[1].replace(/\./g, ''));
@@ -1120,524 +791,19 @@
                             count++;
                         }
                     });
-                    if (count > 0) this.addLog(`Mercado actualizado (Regex): ${count} jugadores.`, 'success');
-                },
-
-                processInput() {
-                    const text = this.rawInput;
-                    if (!text.trim()) return;
-
-                    const startTime = performance.now();
-                    let addedCount = 0;
-
-                    // ⚡ DETECCIÓN HTML (Mercado)
-                    if (text.includes('<html') || text.includes('MuiTypography') || text.includes('__NEXT_DATA__')) {
-                        this.parseMarketData(text);
-                        return;
-                    }
-
-                    // ⚡ OPTIMIZACIÓN: Usar Set para O(1) lookups
-                    const existingIds = new Set(this.movements.map(m => m.id));
-                    const pendingIds = new Set(this.pendingMovements.map(m => m.id));
-
-                    const lines = text.split('\n');
-                    let tempDate = null; // Para guardar fechas "sueltas" (ej: "04/12/2025") que aparecen entre líneas
-
-                    // Pre-procesar para capturar fechas aisladas y asignarlas a bloques cercanos
-                    // Nota: El usuario pega bloques donde la fecha a veces está ABAJO del movimiento.
-                    // Estrategia: Iterar y buscar patrones.
-
-                    // Regex Patterns
-                    // Soporta: [DD/MM/YYYY] o [Hace X días] o [Ayer] o cualquier texto entre corchetes
-                    const reSmartFormat = /^\[([^\]]+)\] (.+)/;  // [Cualquier fecha] Mensaje
-                    const reDate = /(\d{2}\/\d{2}\/\d{4})/;
-                    const reTransfer = /(.+?) ha (comprado|vendido) al jugador (.+?) (?:de|a) (.+?) por ([\d\.]+)[€]?/;
-                    const reShield = /(.+?) ha blindado a (.+)/i;
-                    const reRewardJornada = /En la jornada (\d+), (.+?) ha ganado ([\d\.]+)[€]?/i;
-                    const reReward11 = /(.+?) ha ganado ([\d\.]+)[€]? por tener.+11 ideal/i;
-                    const reTeamValue = /([^\n]+)\s+(\d+)\s+PFSY\s+([\d\.]+)/;
-
-                    // Función para normalizar fechas (convierte hora sola a fecha de hoy)
-                    const normalizeDate = (dateStr) => {
-                        if (!dateStr || dateStr === 'NODATE') return 'Sin fecha';
-
-                        // Si es solo hora (ej: "20:37" o "14:30"), añadir fecha de hoy
-                        if (/^\d{1,2}:\d{2}$/.test(dateStr)) {
-                            const today = new Date();
-                            const dd = String(today.getDate()).padStart(2, '0');
-                            const mm = String(today.getMonth() + 1).padStart(2, '0');
-                            const yyyy = today.getFullYear();
-                            return `${dd}/${mm}/${yyyy} ${dateStr}`;
-                        }
-
-                        // Si ya es fecha completa DD/MM/YYYY, devolverla tal cual
-                        if (/^\d{2}\/\d{2}\/\d{4}/.test(dateStr)) {
-                            return dateStr;
-                        }
-
-                        // Para otros formatos (Hace X días, Ayer, etc.) devolver como está
-                        return dateStr;
-                    };
-
-                    // Estrategia para Team Values (Formato raro de lista)
-                    // Buscaremos patrones de bloque "Nombre \n Num \n PFSY \n Valor" en todo el texto raw
-                    const teamValueMatches = [...text.matchAll(/([^\n\r]+)[\n\r]+\d+[\n\r]+PFSY[\n\r]+([\d\.]+)/g)];
-                    teamValueMatches.forEach(match => {
-                        const managerName = match[1].trim();
-                        const valueRaw = match[2].replace(/\./g, '');
-                        const val = parseInt(valueRaw);
-
-                        if (this.managers[managerName]) {
-                            this.managers[managerName].teamValue = val;
-                            addedCount++;
-                            this.addLog(`Valor equipo actualizado: ${managerName} -> ${this.formatMoney(val)}`, 'success');
-                        }
-                    });
-
-                    // Estrategia para Movimientos línea por línea
-                    lines.forEach((line, index) => {
-                        line = line.trim();
-                        if (!line || line.startsWith('#') || line.startsWith('---')) return; // Ignore headers
-
-                        let currentDateForLine = tempDate;
-                        let textToParse = line;
-
-                        // Check for [Date] Text format (supports any date format)
-                        const smartMatch = line.match(reSmartFormat);
-                        if (smartMatch) {
-                            currentDateForLine = smartMatch[1].trim();  // "Hace 9 días", "Ayer", "14/12/2025", etc.
-                            textToParse = smartMatch[2];
-                        } else if (reDate.test(line)) {
-                            tempDate = line.match(reDate)[1];
-                            return;
-                        }
-
-                        const dateKey = currentDateForLine || tempDate || 'NODATE';
-
-                        // 1. Transferencias
-                        let match = textToParse.match(reTransfer);
-                        if (match) {
-                            const [_, actor, action, player, otherParty, amountStr] = match;
-                            const amount = parseInt(amountStr.replace(/\./g, ''));
-                            const buyer = action === 'comprado' ? actor.trim() : otherParty.trim();
-                            const seller = action === 'comprado' ? otherParty.trim() : actor.trim();
-
-                            // ID UNIQUE with DATE
-                            const id = `transfer_${dateKey}_${buyer}_${seller}_${player}_${amount}`;
-
-                            // ⚡ O(1) lookup en lugar de O(n)
-                            if (!pendingIds.has(id) && !existingIds.has(id)) {
-                                pendingIds.add(id);
-                                this.pendingMovements.push({
-                                    id,
-                                    type: 'transfer',
-                                    buyer,
-                                    seller,
-                                    player,
-                                    amount,
-                                    date: normalizeDate(dateKey)
-                                });
-                            }
-                            return;
-                        }
-
-                        // 2. Blindajes (Nuevo)
-                        match = textToParse.match(reShield);
-                        if (match) {
-                            const [_, manager, player] = match;
-                            const id = `shield_${dateKey}_${manager.trim()}_${player.trim()}`;
-
-                            if (!pendingIds.has(id) && !existingIds.has(id)) {
-                                pendingIds.add(id);
-                                this.pendingMovements.push({
-                                    id,
-                                    type: 'shield',
-                                    beneficiary: manager.trim(),
-                                    player: player.trim(),
-                                    amount: 0,
-                                    details: 'Blindaje',
-                                    date: normalizeDate(dateKey)
-                                });
-                            }
-                            return;
-                        }
-
-                        // 3. Premios Jornada
-                        match = textToParse.match(reRewardJornada);
-                        if (match) {
-                            const [_, jornada, beneficiary, amountStr] = match;
-                            const amount = parseInt(amountStr.replace(/\./g, ''));
-                            const id = `reward_jor${jornada}_${beneficiary.trim()}`;
-
-                            if (!pendingIds.has(id) && !existingIds.has(id)) {
-                                pendingIds.add(id);
-                                this.pendingMovements.push({
-                                    id,
-                                    type: 'reward',
-                                    subtype: 'jornada',
-                                    beneficiary: beneficiary.trim(),
-                                    amount,
-                                    details: `Jornada ${jornada}`,
-                                    date: normalizeDate(dateKey)
-                                });
-                            }
-                            return;
-                        }
-
-                        // 4. Premios 11 Ideal
-                        match = textToParse.match(reReward11);
-                        if (match) {
-                            const [_, beneficiary, amountStr] = match;
-                            const amount = parseInt(amountStr.replace(/\./g, ''));
-                            const id = `reward_11_${beneficiary.trim()}_${dateKey}_${amount}`;
-
-                            if (!pendingIds.has(id) && !existingIds.has(id)) {
-                                pendingIds.add(id);
-                                this.pendingMovements.push({
-                                    id,
-                                    type: 'reward',
-                                    subtype: '11ideal',
-                                    beneficiary: beneficiary.trim(),
-                                    amount,
-                                    details: '11 Ideal',
-                                    date: normalizeDate(dateKey)
-                                });
-                            }
-                            return;
-                        }
-                    });
-
-                    const elapsed = (performance.now() - startTime).toFixed(0);
-
-                    if (this.pendingMovements.length > 0) {
-                        this.addLog(`⚡ ${this.pendingMovements.length} movimientos en ${elapsed}ms. Revisa la tabla.`, 'info');
-                    } else if (addedCount > 0) {
-                        this.addLog(`Valores de equipo actualizados.`, 'success');
-                        this.rawInput = '';
-                    } else {
-                        this.addLog(`No se detectaron movimientos nuevos (${elapsed}ms).`, 'warning');
-                    }
+                    this.addLog(`Mercado (HTML Regex) actualizado: ${count} jugadores`, 'success');
+                    this.debouncedSaveData();
                 },
 
                 confirmImport() {
-                    const startTime = performance.now();
-
-                    // ⚡ OPTIMIZACIÓN: Batch insert con Map para O(1) lookups
-                    const existingMap = new Map(this.movements.map(m => [m.id, m]));
-                    let newCount = 0;
-                    let updatedCount = 0;
-
-                    this.pendingMovements.forEach(mov => {
-                        const existing = existingMap.get(mov.id);
-                        if (!existing) {
-                            this.movements.push(mov);
-                            newCount++;
-                        } else if (mov.date.includes('/') && !existing.date.includes('/')) {
-                            existing.date = mov.date;
-                            updatedCount++;
-                        }
-                    });
-
-                    const elapsed = (performance.now() - startTime).toFixed(0);
-                    this.addLog(`⚡ Importación: ${newCount} nuevos, ${updatedCount} actualizados (${elapsed}ms)`, 'success');
+                    this.movements = [...this.movements, ...this.pendingMovements];
                     this.pendingMovements = [];
-                    this.rawInput = '';
                     this.saveData();
+                    this.reconstructTradingHistory();
+                    this.addLog('Importación confirmada', 'success');
+                    this.rawInput = '';
                 },
-
-                cancelImport() {
-                    this.pendingMovements = [];
-                    this.addLog('Importación cancelada.', 'info');
-                },
-
-                addClauseExpense() {
-                    const { manager, amount } = this.clauseForm;
-                    if (manager && amount) {
-                        if (this.managers[manager]) {
-                            this.managers[manager].clauseExpenses += parseInt(amount);
-                            this.addLog(`Gasto clausula añadido a ${manager}: -${amount}€`, 'success');
-                            this.clauseForm.amount = '';
-                        }
-                    }
-                },
-
-                processClauseBulk() {
-                    const lines = this.clauseBulkInput.split('\n');
-                    lines.forEach(line => {
-                        // Formato: "Equipo [TAB] 168.850.000 €"
-                        const parts = line.split('\t');
-                        if (parts.length >= 2) {
-                            const name = parts[0].trim();
-                            const amountRaw = parts[1].replace(/[€\.\s]/g, '');
-                            const amount = parseInt(amountRaw);
-
-                            if (this.managers[name] && !isNaN(amount)) {
-                                // Reemplazar o sumar? El usuario dice "ir agregando", pero el archivo parece un estado total.
-                                // Asumiremos que este input "SET" el valor total de gasto en clausulas si viene de archivo.
-                                this.managers[name].clauseExpenses = amount;
-                                this.addLog(`Cláusulas SET para ${name}: ${amount}`, 'success');
-                            }
-                        }
-                    });
-                    this.clauseBulkInput = '';
-                },
-
-                // STORAGE
-                saveData() {
-                    const data = {
-                        managers: this.managers,
-                        movements: this.movements,
-                        marketData: this.marketData, // Persist dynamic market data
-                        lastUpdate: Date.now()
-                    };
-
-                    if (db) {
-                        db.ref('fantasy_data').set(data);
-                    } else {
-                        localStorage.setItem('fantasy_gameplay_data', JSON.stringify(data));
-                    }
-                },
-
-                loadData() {
-                    if (db) {
-                        db.ref('fantasy_data').on('value', snapshot => {
-                            const val = snapshot.val();
-                            if (val) {
-                                this.isRemoteUpdate = true; // Block watchers
-
-                                // Load and Sanitize Managers
-                                let loadedManagers = val.managers || {};
-                                if (val.marketData) this.marketData = val.marketData; // Load dynamic market data
-
-                                // Official allowed keys
-                                const allowedKeys = ["Vigar FC", "GOLENCIERRO FC", "Pablinistan FC", "Alcatamy eSports By", "Visite La Manga FC", "Morenazos FC"];
-
-                                // Merge logic: Copy ONLY allowed keys.
-                                // Special migration: If Vigar24 exists but Vigar FC doesn't have data, migrate it?
-                                // Better: Just accept Vigar FC if present. If user re-imports clauses, it will be fixed.
-
-                                allowedKeys.forEach(key => {
-                                    if (loadedManagers[key]) {
-                                        this.managers[key] = loadedManagers[key];
-                                    }
-                                });
-
-                                // Cleanup invalid keys (e.g. duplicate Alcatamy with spaces)
-                                Object.keys(this.managers).forEach(k => {
-                                    if (!allowedKeys.includes(k)) delete this.managers[k];
-                                });
-
-                                this.movements = val.movements || [];
-
-                                // MIGRATE MOVEMENTS
-                                let corrected = 0;
-                                const nameMap = { 'Vigar24': 'Vigar FC' };
-                                this.movements.forEach(m => {
-                                    const proc = n => { if (!n) return n; let c = n.trim(); return nameMap[c] || c; };
-                                    if (m.buyer) { let n = proc(m.buyer); if (n !== m.buyer) { m.buyer = n; corrected++; } }
-                                    if (m.seller) { let n = proc(m.seller); if (n !== m.seller) { m.seller = n; corrected++; } }
-                                    if (m.beneficiary) { let n = proc(m.beneficiary); if (n !== m.beneficiary) { m.beneficiary = n; corrected++; } }
-                                });
-
-                                // Allow watchers again after Alpine processes the change
-                                this.$nextTick(() => {
-                                    this.isRemoteUpdate = false;
-                                    if (corrected > 0) this.saveData();
-                                });
-
-                                this.addLog(`Sincronizado con Firebase (${this.movements.length} movs). Datos limpiados.`, 'success');
-                            }
-                        });
-                    } else {
-                        const local = localStorage.getItem('fantasy_gameplay_data');
-                        if (local) {
-                            const data = JSON.parse(local);
-
-                            // Sanitize LocalStorage
-                            let loadedManagers = data.managers || {};
-                            const allowedKeys = ["Vigar FC", "GOLENCIERRO FC", "Pablinistan FC", "Alcatamy eSports By", "Visite La Manga FC", "Morenazos FC"];
-
-                            allowedKeys.forEach(key => {
-                                if (loadedManagers[key]) {
-                                    this.managers[key] = loadedManagers[key];
-                                }
-                            });
-                            Object.keys(this.managers).forEach(k => {
-                                if (!allowedKeys.includes(k)) delete this.managers[k];
-                            });
-
-                            this.movements = data.movements || [];
-
-                            // MIGRATE MOVEMENTS (Local)
-                            let corrected = 0;
-                            const nameMap = { 'Vigar24': 'Vigar FC' };
-                            this.movements.forEach(m => {
-                                const proc = n => { if (!n) return n; let c = n.trim(); return nameMap[c] || c; };
-                                if (m.buyer) { let n = proc(m.buyer); if (n !== m.buyer) { m.buyer = n; corrected++; } }
-                                if (m.seller) { let n = proc(m.seller); if (n !== m.seller) { m.seller = n; corrected++; } }
-                                if (m.beneficiary) { let n = proc(m.beneficiary); if (n !== m.beneficiary) { m.beneficiary = n; corrected++; } }
-                            });
-                            if (corrected > 0) this.saveData();
-
-                            this.addLog('Datos cargados de LocalStorage (Limpios)', 'info');
-                        }
-                    }
-                },
-
-                // CHARTS
-                // CHARTS
-                parseDate(dateStr) {
-                    // Formats: "DD/MM/YYYY", "DD/MM/YYYY HH:MM", "Sin fecha"
-                    if (!dateStr || dateStr === 'Sin fecha') return new Date(0);
-
-                    // Handle "Today HH:MM" which normalized looks like "DD/MM/YYYY HH:MM"
-                    const [datePart, timePart] = dateStr.split(' ');
-                    const [d, m, y] = datePart.split('/');
-
-                    if (!d || !m || !y) return new Date(0);
-
-                    const date = new Date(y, m - 1, d);
-                    if (timePart) {
-                        const [hh, mm] = timePart.split(':');
-                        date.setHours(hh || 0, mm || 0);
-                    }
-                    return date;
-                },
-
-                updateCharts() {
-                    const ctx = document.getElementById('patrimonyChart');
-                    if (!ctx) return;
-
-                    // 1. Sort movements chronologically
-                    const sortedMovs = [...this.movements].sort((a, b) => {
-                        return this.parseDate(a.date) - this.parseDate(b.date);
-                    });
-
-                    // 2. Replay History
-                    const balances = {};
-                    // Initialize with managers' initial budget settings
-                    // NOTE: If movements are complete history, this works perfectly. 
-                    // If partial, it shows relative change from base.
-                    const initialBudgets = {};
-
-                    // Colors mapping
-                    const colors = {
-                        "Vigar FC": '#00f3ff', // Neon Blue
-                        "GOLENCIERRO FC": '#00ff9d', // Neon Green
-                        "Pablinistan FC": '#ff00d4', // Neon Pink
-                        "Alcatamy eSports By": '#bc13fe', // Neon Purple
-                        "Visite La Manga FC": '#ffff00', // Yellow
-                        "Morenazos FC": '#ff0000'  // Red
-                    };
-
-                    Object.keys(this.managers).forEach(k => {
-                        balances[k] = this.managers[k].initialBudget;
-                        initialBudgets[k] = this.managers[k].initialBudget;
-                    });
-
-                    const labels = [];
-                    const datasets = Object.keys(this.managers).map(k => ({
-                        label: k,
-                        data: [], // {x, y}
-                        borderColor: colors[k] || '#888',
-                        backgroundColor: (colors[k] || '#888') + '20',
-                        tension: 0.3,
-                        borderWidth: 2,
-                        pointRadius: 0 // Clean look
-                    }));
-
-                    // Add Start Point (Date 0 or First Movement Date - 1 day)
-                    // Simplified: Start pushing data from first movement
-
-                    let currentDateStr = '';
-
-                    sortedMovs.forEach(m => {
-                        // Apply Transaction
-                        if (m.type === 'transfer') {
-                            const amount = parseInt(m.amount);
-                            if (balances[m.buyer] !== undefined) balances[m.buyer] -= amount;
-                            if (balances[m.seller] !== undefined) balances[m.seller] += amount;
-                        } else if (m.type === 'reward') {
-                            const amount = parseInt(m.amount);
-                            if (balances[m.beneficiary] !== undefined) balances[m.beneficiary] += amount;
-                        }
-
-                        // Store point only if date changes (Daily close)
-                        const isoDate = this.parseDate(m.date).toLocaleDateString('es-ES'); // DD/MM/YYYY
-
-                        if (isoDate !== currentDateStr) {
-                            currentDateStr = isoDate;
-                            labels.push(isoDate.substring(0, 5)); // "DD/MM"
-
-                            // Push value for each dataset
-                            datasets.forEach(ds => {
-                                ds.data.push(balances[ds.label]);
-                            });
-                        } else {
-                            // Update last point value if same day
-                            datasets.forEach(ds => {
-                                if (ds.data.length > 0) {
-                                    ds.data[ds.data.length - 1] = balances[ds.label];
-                                }
-                            });
-                        }
-                    });
-
-                    if (window.myChart) window.myChart.destroy();
-
-                    window.myChart = new Chart(ctx, {
-                        type: 'line',
-                        data: {
-                            labels: labels,
-                            datasets: datasets
-                        },
-                        options: {
-                            responsive: true,
-                            interaction: {
-                                mode: 'index',
-                                intersect: false,
-                            },
-                            plugins: {
-                                legend: {
-                                    position: 'bottom',
-                                    labels: { color: '#9ca3af', font: { size: 10 } }
-                                },
-                                tooltip: {
-                                    backgroundColor: 'rgba(17, 24, 39, 0.9)',
-                                    titleColor: '#fff',
-                                    bodyColor: '#ccc',
-                                    borderColor: '#374151',
-                                    borderWidth: 1,
-                                    callbacks: {
-                                        label: function (context) {
-                                            let label = context.dataset.label || '';
-                                            if (label) {
-                                                label += ': ';
-                                            }
-                                            if (context.parsed.y !== null) {
-                                                label += new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(context.parsed.y);
-                                            }
-                                            return label;
-                                        }
-                                    }
-                                }
-                            },
-                            scales: {
-                                y: {
-                                    ticks: {
-                                        color: '#6b7280',
-                                        callback: function (value) { return (value / 1000000).toFixed(0) + 'M'; }
-                                    },
-                                    grid: { color: '#374151', drawBorder: false }
-                                },
-                                x: {
-                                    ticks: { color: '#9ca3af', maxTicksLimit: 10 },
-                                    grid: { display: false }
-                                }
-                            }
-                        }
-                    });
-                }
+                cancelImport() { this.pendingMovements = []; this.rawInput = ''; }
             }
         }
     </script>
