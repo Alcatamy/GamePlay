@@ -112,6 +112,13 @@
                         class="font-bold text-lg sm:text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-neon-blue to-neon-purple">GamePlay</span>
                     <span
                         class="hidden sm:inline ml-1 px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 text-[10px] tracking-widest font-bold border border-yellow-500/30 uppercase">Premium</span>
+                    <!-- Sync Status Indicator -->
+                    <span class="flex items-center gap-1 text-xs"
+                        :title="syncStatus === 'synced' ? 'Sincronizado con Firebase' : syncStatus === 'syncing' ? 'Guardando...' : 'Error de sincronización'">
+                        <span x-show="syncStatus === 'synced'" class="text-green-400">✓</span>
+                        <span x-show="syncStatus === 'syncing'" class="text-yellow-400 animate-pulse">⟳</span>
+                        <span x-show="syncStatus === 'error'" class="text-red-400">✗</span>
+                    </span>
                 </div>
 
                 <!-- Desktop Navigation -->
@@ -1452,6 +1459,7 @@
             return {
                 currentTab: 'dashboard',
                 mobileMenuOpen: false,
+                syncStatus: 'synced', // 'synced', 'syncing', 'error'
                 rawInput: '',
                 clauseBulkInput: '',
                 clauseForm: { manager: '', amount: '' },
@@ -2308,6 +2316,7 @@
 
                 processClauseBulk() {
                     const lines = this.clauseBulkInput.split('\n');
+                    let updated = 0;
                     lines.forEach(line => {
                         // Formato: "Equipo [TAB] 168.850.000 €"
                         const parts = line.split('\t');
@@ -2317,14 +2326,19 @@
                             const amount = parseInt(amountRaw);
 
                             if (this.managers[name] && !isNaN(amount)) {
-                                // Reemplazar o sumar? El usuario dice "ir agregando", pero el archivo parece un estado total.
-                                // Asumiremos que este input "SET" el valor total de gasto en clausulas si viene de archivo.
                                 this.managers[name].clauseExpenses = amount;
-                                this.addLog(`Cláusulas SET para ${name}: ${amount}`, 'success');
+                                this.addLog(`Cláusulas SET para ${name}: ${this.formatMoney(amount)}`, 'success');
+                                updated++;
                             }
                         }
                     });
                     this.clauseBulkInput = '';
+
+                    // Force immediate save to Firebase (don't rely on debounce)
+                    if (updated > 0) {
+                        this.saveData();
+                        this.addLog(`✅ ${updated} cláusulas guardadas en Firebase`, 'success');
+                    }
                 },
 
                 // STORAGE
@@ -2341,6 +2355,9 @@
                 },
 
                 saveData() {
+                    // Set syncing status
+                    this.syncStatus = 'syncing';
+
                     // Sanitize marketData keys for Firebase compatibility
                     const sanitizedMarketData = {};
                     Object.entries(this.marketData).forEach(([key, value]) => {
@@ -2356,10 +2373,17 @@
 
                     if (db) {
                         db.ref('fantasy_data').set(data)
-                            .then(() => console.log('Data saved to Firebase'))
-                            .catch(err => console.error('Firebase save error:', err));
+                            .then(() => {
+                                console.log('Data saved to Firebase');
+                                this.syncStatus = 'synced';
+                            })
+                            .catch(err => {
+                                console.error('Firebase save error:', err);
+                                this.syncStatus = 'error';
+                            });
                     } else {
                         localStorage.setItem('fantasy_gameplay_data', JSON.stringify(data));
+                        this.syncStatus = 'synced';
                     }
                 },
 
