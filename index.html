@@ -1133,9 +1133,22 @@
 
             <!-- Players Table -->
             <div class="glass-panel p-4 rounded-xl overflow-x-auto max-h-[600px] overflow-y-auto">
+                <!-- Watchlist Toggle -->
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-sm text-gray-400"
+                        x-text="'Mostrando ' + (showWatchlistOnly ? watchlist.length + ' seguidos' : 'todos los jugadores')"></span>
+                    <button @click="showWatchlistOnly = !showWatchlistOnly"
+                        :class="showWatchlistOnly ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500' : 'bg-gray-800 text-gray-400 border-gray-700'"
+                        class="px-3 py-1.5 rounded-lg text-sm font-medium border transition-all flex items-center gap-2">
+                        <span>⭐</span>
+                        <span
+                            x-text="showWatchlistOnly ? 'Mostrar Todos' : 'Solo Seguidos (' + watchlist.length + ')'"></span>
+                    </button>
+                </div>
                 <table class="w-full text-left text-sm">
                     <thead class="sticky top-0 bg-gray-900 z-10">
                         <tr class="text-gray-400 text-xs uppercase">
+                            <th class="px-2 py-2 w-8">⭐</th>
                             <th class="px-3 py-2">#</th>
                             <th class="px-3 py-2">Jugador</th>
                             <th class="px-3 py-2 text-center">Pos</th>
@@ -1165,12 +1178,23 @@
                             if (marketExplorer.positionFilter !== 'all') {
                                 players = players.filter(p => p.position === marketExplorer.positionFilter);
                             }
+                            // Filter by watchlist
+                            if (showWatchlistOnly) {
+                                players = players.filter(p => watchlist.includes(p.name));
+                            }
                             // Sort
                             const sortKey = marketExplorer.sortBy;
                             players.sort((a, b) => marketExplorer.sortDir === 'desc' ? b[sortKey] - a[sortKey] : a[sortKey] - b[sortKey]);
                             return players.slice(0, 100);
                         })()" :key="player.name">
                             <tr class="border-b border-gray-800 hover:bg-gray-800/50">
+                                <td class="px-2 py-2 text-center">
+                                    <button @click="toggleWatchlist(player.name)"
+                                        class="text-lg hover:scale-125 transition-transform"
+                                        :class="isInWatchlist(player.name) ? 'text-yellow-400' : 'text-gray-600 hover:text-gray-400'">
+                                        <span x-text="isInWatchlist(player.name) ? '★' : '☆'"></span>
+                                    </button>
+                                </td>
                                 <td class="px-3 py-2 text-gray-500" x-text="idx + 1"></td>
                                 <td class="px-3 py-2 font-medium text-white" x-text="player.name"></td>
                                 <td class="px-3 py-2 text-center">
@@ -1569,6 +1593,10 @@
                 },
                 tradingHistory: { closedDeals: [], rosters: {}, managerStats: {} },
 
+                // WATCHLIST
+                watchlist: JSON.parse(localStorage.getItem('fantasy_watchlist') || '[]'),
+                showWatchlistOnly: false,
+
                 // ANALYTICS STATE
                 managerAnalytics: {
                     // Will be populated per manager: { purchases: [], avgSpread: 0, spreadByPosition: {}, patterns: {} }
@@ -1843,6 +1871,21 @@
                 addLog(msg, type = 'info') {
                     const time = new Date().toLocaleTimeString();
                     this.logs.unshift({ id: Date.now(), time, msg, type });
+                },
+
+                // WATCHLIST FUNCTIONS
+                isInWatchlist(playerName) {
+                    return this.watchlist.includes(playerName);
+                },
+
+                toggleWatchlist(playerName) {
+                    const idx = this.watchlist.indexOf(playerName);
+                    if (idx > -1) {
+                        this.watchlist.splice(idx, 1);
+                    } else {
+                        this.watchlist.push(playerName);
+                    }
+                    localStorage.setItem('fantasy_watchlist', JSON.stringify(this.watchlist));
                 },
 
                 // CALCS
