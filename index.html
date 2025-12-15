@@ -499,7 +499,7 @@
                 // DATA MODEL
                 isRemoteUpdate: false, // Flag to prevent circular updates
                 managers: {
-                    "Vigar24": { initialBudget: 103000000, teamValue: 0, clauseExpenses: 0, name: "Vigar24" },
+                    "Vigar FC": { initialBudget: 103000000, teamValue: 0, clauseExpenses: 0, name: "Vigar FC" },
                     "GOLENCIERRO FC": { initialBudget: 103000000, teamValue: 0, clauseExpenses: 0, name: "GOLENCIERRO FC" },
                     "Pablinistan FC": { initialBudget: 103000000, teamValue: 0, clauseExpenses: 0, name: "Pablinistan FC" },
                     "Alcatamy eSports By": { initialBudget: 100000000, teamValue: 0, clauseExpenses: 0, name: "Alcatamy eSports By" },
@@ -998,21 +998,55 @@
                             const val = snapshot.val();
                             if (val) {
                                 this.isRemoteUpdate = true; // Block watchers
-                                this.managers = val.managers || this.managers;
+
+                                // Load and Sanitize Managers
+                                let loadedManagers = val.managers || {};
+
+                                // Official allowed keys
+                                const allowedKeys = ["Vigar FC", "GOLENCIERRO FC", "Pablinistan FC", "Alcatamy eSports By", "Visite La Manga FC", "Morenazos FC"];
+
+                                // Merge logic: Copy ONLY allowed keys.
+                                // Special migration: If Vigar24 exists but Vigar FC doesn't have data, migrate it?
+                                // Better: Just accept Vigar FC if present. If user re-imports clauses, it will be fixed.
+
+                                allowedKeys.forEach(key => {
+                                    if (loadedManagers[key]) {
+                                        this.managers[key] = loadedManagers[key];
+                                    }
+                                });
+
+                                // Cleanup invalid keys (e.g. duplicate Alcatamy with spaces)
+                                Object.keys(this.managers).forEach(k => {
+                                    if (!allowedKeys.includes(k)) delete this.managers[k];
+                                });
+
                                 this.movements = val.movements || [];
                                 // Allow watchers again after Alpine processes the change
                                 this.$nextTick(() => { this.isRemoteUpdate = false; });
 
-                                this.addLog(`Sincronizado con Firebase (${this.movements.length} movs)`, 'success');
+                                this.addLog(`Sincronizado con Firebase (${this.movements.length} movs). Datos limpiados.`, 'success');
                             }
                         });
                     } else {
                         const local = localStorage.getItem('fantasy_gameplay_data');
                         if (local) {
                             const data = JSON.parse(local);
-                            this.managers = data.managers || this.managers;
+
+                            // Sanitize LocalStorage
+                            let loadedManagers = data.managers || {};
+                            const allowedKeys = ["Vigar FC", "GOLENCIERRO FC", "Pablinistan FC", "Alcatamy eSports By", "Visite La Manga FC", "Morenazos FC"];
+
+                            allowedKeys.forEach(key => {
+                                if (loadedManagers[key]) {
+                                    this.managers[key] = loadedManagers[key];
+                                }
+                            });
+                            Object.keys(this.managers).forEach(k => {
+                                if (!allowedKeys.includes(k)) delete this.managers[k];
+                            });
+
                             this.movements = data.movements || [];
-                            this.addLog('Datos cargados de LocalStorage', 'info');
+                            this.addLog('Datos cargados de LocalStorage (Limpios)', 'info');
                         }
                     }
                 },
