@@ -13,6 +13,23 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Firebase SDKs (Compat) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBzlYu7dTaEvIIt7VehdhVwqOLS2BLnqDQ",
+            authDomain: "mercato-fbdcc.firebaseapp.com",
+            databaseURL: "https://mercato-fbdcc-default-rtdb.firebaseio.com",
+            projectId: "mercato-fbdcc",
+            storageBucket: "mercato-fbdcc.firebasestorage.app",
+            messagingSenderId: "865841758007",
+            appId: "1:865841758007:web:ac53121bc37d00574864b2",
+            measurementId: "G-0WQNPFTYNF"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+    </script>
     <!-- Market Data -->
     <script src="market_data.js"></script>
 
@@ -281,6 +298,7 @@
                                     <th class="p-4">Jugador</th>
                                     <th class="p-4">Estado / Dueño</th>
                                     <th class="p-4 text-right">Valor Mercado</th>
+                                    <th class="p-4 text-right">24h %</th>
                                     <th class="p-4 text-right">Coste Adquisición</th>
                                     <th class="p-4 text-right">Diff</th>
                                 </tr>
@@ -298,6 +316,15 @@
                                         </td>
                                         <td class="p-4 text-right font-mono text-green-400"
                                             x-text="formatMoney(p.value)"></td>
+                                        <td class="p-4 text-right text-xs font-mono"
+                                            :class="p.trendPct > 0 ? 'text-green-500' : (p.trendPct < 0 ? 'text-red-500' : 'text-slate-500')">
+                                            <span x-show="p.trendPct !== 0">
+                                                <i class="fas"
+                                                    :class="p.trendPct > 0 ? 'fa-caret-up' : 'fa-caret-down'"></i>
+                                                <span x-text="Math.abs(p.trendPct) + '%'"></span>
+                                            </span>
+                                            <span x-show="p.trendPct === 0">-</span>
+                                        </td>
                                         <td class="p-4 text-right text-slate-500 text-xs"
                                             x-text="p.cost ? formatMoney(p.cost) : '-'"></td>
                                         <td class="p-4 text-right text-xs"
@@ -344,6 +371,7 @@
                                     <th class="p-3">Fecha</th>
                                     <th class="p-3">Tipo</th>
                                     <th class="p-3">Descripción</th>
+                                    <th class="p-3 text-right">Sobrecoste (Est.)</th>
                                     <th class="p-3 text-right">Importe</th>
                                 </tr>
                             </thead>
@@ -366,6 +394,19 @@
                                                     class="fas fa-arrow-right text-[10px]"></i> <span
                                                     x-text="m.buyer"></span>
                                             </div>
+                                        </td>
+                                        <td class="p-3 text-right text-xs font-mono text-slate-400">
+                                            <template x-if="m.type === 'transfer' && marketData[m.player]">
+                                                <span
+                                                    :class="(m.amount - marketData[m.player]) > 0 ? 'text-red-400' : 'text-green-400'">
+                                                    <span
+                                                        x-text="(m.amount - marketData[m.player]) > 0 ? '+' : ''"></span>
+                                                    <span x-text="formatMoney(m.amount - marketData[m.player])"></span>
+                                                </span>
+                                            </template>
+                                            <template x-if="!(m.type === 'transfer' && marketData[m.player])">
+                                                <span>-</span>
+                                            </template>
                                         </td>
                                         <td class="p-3 text-right font-mono text-white" x-text="formatMoney(m.amount)">
                                         </td>
@@ -424,6 +465,38 @@
                                             <div class="font-mono text-red-500 font-bold"
                                                 x-text="formatMoney(deal.profit)"></div>
                                             <div class="text-xs text-slate-500">Pérdida</div>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="glass-card p-6 lg:col-span-2">
+                            <h3 class="text-lg font-bold text-blue-400 mb-4"><i
+                                    class="fas fa-search-dollar mr-2"></i>Análisis de Pujas (Patrones)</h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                <template x-for="(stats, mgr) in calculateBidPatterns()" :key="mgr">
+                                    <div class="bg-slate-800/40 p-4 rounded-lg border border-slate-700">
+                                        <div class="font-bold text-white mb-2" x-text="mgr"></div>
+                                        <div class="space-y-1 text-xs">
+                                            <div class="flex justify-between">
+                                                <span class="text-slate-400">Pujas Totales</span>
+                                                <span class="text-white" x-text="stats.total"></span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-slate-400">Redondas (..000)</span>
+                                                <span class="text-green-400"
+                                                    x-text="((stats.round/stats.total)*100).toFixed(0) + '%'"></span>
+                                            </div>
+                                            <div class="flex justify-between">
+                                                <span class="text-slate-400">Estratégicas (..001)</span>
+                                                <span class="text-yellow-400"
+                                                    x-text="((stats.strategic/stats.total)*100).toFixed(0) + '%'"></span>
+                                            </div>
+                                            <div class="flex justify-between border-t border-slate-700 pt-1 mt-1">
+                                                <span class="text-slate-400">Sobrecoste Medio</span>
+                                                <span class="text-blue-400" x-text="stats.avgOverbid + '%'"></span>
+                                            </div>
                                         </div>
                                     </div>
                                 </template>
@@ -501,6 +574,7 @@
                 movements: [],
                 pendingMovements: [],
                 marketData: typeof MARKET_DATA !== 'undefined' ? MARKET_DATA : {},
+                marketTrends: typeof MARKET_TRENDS !== 'undefined' ? MARKET_TRENDS : {},
                 logs: [],
 
                 tradingHistory: { closedDeals: [], rosters: {}, managerStats: {} },
@@ -583,6 +657,7 @@
                     let allPlayers = Object.keys(this.marketData).map(name => ({
                         name: name,
                         value: this.marketData[name],
+                        trendPct: this.marketTrends[name]?.pct || 0,
                         owner: ownedPlayers[name]?.owner || null,
                         cost: ownedPlayers[name]?.cost || 0
                     }));
@@ -611,6 +686,25 @@
 
                 // METHODS
                 async initApp() {
+                    // Firebase Sync
+                    const dbRef = db.ref('fantasy_gameplay_data');
+                    dbRef.on('value', (snapshot) => {
+                        const data = snapshot.val();
+                        if (data) {
+                            // Merge Strategy: Prefer Cloud if newer? Or just overwrite?
+                            // User wants real-time sync. Overwrite is standard.
+                            this.movements = data.movements || [];
+                            if (data.managers) this.managers = data.managers;
+                            if (data.marketData) this.marketData = data.marketData;
+                            this.reconstructTradingHistory();
+                            this.addLog('Sincronizado con Nube', 'success');
+
+                            // Backup to Local
+                            localStorage.setItem('fantasy_gameplay_data', JSON.stringify(data));
+                        }
+                    });
+
+                    // Fallback Local
                     const saved = localStorage.getItem('fantasy_gameplay_data');
                     if (saved) {
                         try {
@@ -684,12 +778,16 @@
                 },
 
                 saveData() {
-                    localStorage.setItem('fantasy_gameplay_data', JSON.stringify({
+                    const data = {
                         movements: this.movements,
                         marketData: this.marketData,
                         managers: this.managers,
                         lastUpdate: Date.now()
-                    }));
+                    };
+                    // Save to Cloud
+                    db.ref('fantasy_gameplay_data').set(data).catch(e => console.error(e));
+                    // Save to Local
+                    localStorage.setItem('fantasy_gameplay_data', JSON.stringify(data));
                 },
                 debouncedSaveData() { clearTimeout(this._tm); this._tm = setTimeout(() => this.saveData(), 1000); },
 
@@ -704,6 +802,40 @@
 
                 calculateTotalVolume() { return this.movements.reduce((acc, m) => acc + (parseInt(m.amount) || 0), 0); },
                 calculateMarketTotal() { return Object.values(this.marketData).reduce((a, b) => a + b, 0); },
+
+                calculateBidPatterns() {
+                    const stats = {};
+                    this.movements.forEach(m => {
+                        if (m.type === 'transfer' && m.amount > 0) {
+                            if (!stats[m.buyer]) stats[m.buyer] = { total: 0, round: 0, strategic: 0, overbidSum: 0, overbidCount: 0 };
+
+                            stats[m.buyer].total++;
+                            if (m.amount % 1000 === 0) stats[m.buyer].round++;
+                            if (m.amount % 10 === 1) stats[m.buyer].strategic++;
+
+                            // Estimate Overbid vs Current Value (Proxy)
+                            const mv = this.marketData[m.player];
+                            if (mv && mv > 0) {
+                                const overbid = ((m.amount - mv) / mv) * 100;
+                                stats[m.buyer].overbidSum += overbid;
+                                stats[m.buyer].overbidCount++;
+                            }
+                        }
+                    });
+
+                    const result = {};
+                    Object.keys(stats).forEach(k => {
+                        const s = stats[k];
+                        result[k] = {
+                            total: s.total,
+                            round: s.round,
+                            strategic: s.strategic,
+                            avgOverbid: s.overbidCount > 0 ? (s.overbidSum / s.overbidCount).toFixed(1) : 0
+                        };
+                    });
+                    // Sort by Total Activity
+                    return Object.entries(result).sort((a, b) => b[1].total - a[1].total).reduce((acc, [k, v]) => ({ ...acc, [k]: v }), {});
+                },
 
                 // ROBUST PARSERS (FROM v1)
                 processInput() {
