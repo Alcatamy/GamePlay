@@ -62,6 +62,8 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="market_data.js"></script>
     <script src="movements_data.js"></script>
+    <!-- Chart.js for Data Visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
@@ -320,6 +322,28 @@
                 </div>
             </div>
 
+            <!-- CHARTS SECTION -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+                <!-- Patrimony Comparison Chart -->
+                <div class="glass-panel rounded-xl p-6">
+                    <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        📊 Comparativa de Patrimonio
+                    </h3>
+                    <div class="h-64">
+                        <canvas id="patrimonyChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Trading Activity by Day -->
+                <div class="glass-panel rounded-xl p-6">
+                    <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        📈 Actividad de Fichajes
+                    </h3>
+                    <div class="h-64">
+                        <canvas id="activityChart"></canvas>
+                    </div>
+                </div>
+            </div>
 
         </div>
 
@@ -1429,6 +1453,66 @@
 
     </main>
 
+    <!-- MOBILE BOTTOM NAVIGATION -->
+    <nav class="lg:hidden fixed bottom-0 left-0 right-0 z-50 glass-panel border-t border-gray-800 safe-area-bottom">
+        <div class="grid grid-cols-5 gap-1 px-2 py-2">
+            <button @click="currentTab = 'dashboard'"
+                :class="currentTab === 'dashboard' ? 'text-neon-blue bg-neon-blue/10' : 'text-gray-400'"
+                class="flex flex-col items-center justify-center p-2 rounded-lg transition-all">
+                <span class="text-xl">📊</span>
+                <span class="text-[10px] mt-0.5 font-medium">Dashboard</span>
+            </button>
+            <button @click="currentTab = 'parser'"
+                :class="currentTab === 'parser' ? 'text-neon-green bg-neon-green/10' : 'text-gray-400'"
+                class="flex flex-col items-center justify-center p-2 rounded-lg transition-all">
+                <span class="text-xl">✨</span>
+                <span class="text-[10px] mt-0.5 font-medium">Parser</span>
+            </button>
+            <button @click="currentTab = 'market'"
+                :class="currentTab === 'market' ? 'text-cyan-400 bg-cyan-400/10' : 'text-gray-400'"
+                class="flex flex-col items-center justify-center p-2 rounded-lg transition-all">
+                <span class="text-xl">📈</span>
+                <span class="text-[10px] mt-0.5 font-medium">Mercado</span>
+            </button>
+            <button @click="currentTab = 'movements'"
+                :class="currentTab === 'movements' ? 'text-orange-400 bg-orange-400/10' : 'text-gray-400'"
+                class="flex flex-col items-center justify-center p-2 rounded-lg transition-all">
+                <span class="text-xl">📋</span>
+                <span class="text-[10px] mt-0.5 font-medium">Historial</span>
+            </button>
+            <button @click="mobileMenuOpen = !mobileMenuOpen"
+                :class="mobileMenuOpen ? 'text-yellow-400 bg-yellow-400/10' : 'text-gray-400'"
+                class="flex flex-col items-center justify-center p-2 rounded-lg transition-all relative">
+                <span class="text-xl">⋯</span>
+                <span class="text-[10px] mt-0.5 font-medium">Más</span>
+                <!-- More Menu Popup -->
+                <div x-show="mobileMenuOpen" x-cloak x-transition:enter="transition ease-out duration-200"
+                    x-transition:enter-start="opacity-0 translate-y-4"
+                    x-transition:enter-end="opacity-100 translate-y-0" @click.stop
+                    class="absolute bottom-full right-0 mb-2 w-48 glass-panel rounded-xl border border-gray-700 shadow-xl p-2 space-y-1">
+                    <button @click="currentTab = 'stats'; mobileMenuOpen = false"
+                        class="w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-800"
+                        :class="currentTab === 'stats' ? 'text-neon-pink' : 'text-gray-300'">
+                        📈 Estadísticas
+                    </button>
+                    <button @click="currentTab = 'clauses'; mobileMenuOpen = false"
+                        class="w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-800"
+                        :class="currentTab === 'clauses' ? 'text-neon-purple' : 'text-gray-300'">
+                        ⚖️ Cláusulas
+                    </button>
+                    <button @click="currentTab = 'advanced'; mobileMenuOpen = false"
+                        class="w-full text-left px-3 py-2 rounded-lg text-sm flex items-center gap-2 hover:bg-gray-800"
+                        :class="currentTab === 'advanced' ? 'text-yellow-400' : 'text-gray-300'">
+                        🚀 Métricas Avanzadas
+                    </button>
+                </div>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Add padding at bottom for mobile nav -->
+    <div class="lg:hidden h-20"></div>
+
     <!-- LOGIC -->
     <script>
         // CONFIGURACIÓN DE FIREBASE (PRODUCCIÓN)
@@ -1596,6 +1680,14 @@
                         if (!this.isRemoteUpdate) this.debouncedSaveData();
                         this.debouncedUpdateCharts();
                     });
+                    this.$watch('currentTab', (val) => {
+                        if (val === 'dashboard') {
+                            this.$nextTick(() => this.updateCharts());
+                        }
+                    });
+
+                    // Initial chart render after data loads
+                    setTimeout(() => this.updateCharts(), 1000);
                 },
 
                 // UTILS
@@ -1609,6 +1701,139 @@
                         clearTimeout(timeout);
                         timeout = setTimeout(later, wait);
                     };
+                },
+
+                // CHARTS
+                patrimonyChart: null,
+                activityChart: null,
+
+                updateCharts() {
+                    // Only update if on dashboard tab
+                    if (this.currentTab !== 'dashboard') return;
+
+                    this.$nextTick(() => {
+                        // Patrimony Chart
+                        const patrimonyCtx = document.getElementById('patrimonyChart');
+                        if (patrimonyCtx) {
+                            const data = this.sortedManagers.map(m => ({
+                                name: m.name.split(' ')[0], // Short name
+                                balance: m.balance,
+                                teamValue: m.teamValue,
+                                patrimony: m.balance + m.teamValue
+                            }));
+
+                            if (this.patrimonyChart) {
+                                this.patrimonyChart.destroy();
+                            }
+
+                            this.patrimonyChart = new Chart(patrimonyCtx, {
+                                type: 'bar',
+                                data: {
+                                    labels: data.map(d => d.name),
+                                    datasets: [
+                                        {
+                                            label: 'Saldo',
+                                            data: data.map(d => d.balance / 1000000),
+                                            backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                                            borderColor: 'rgba(59, 130, 246, 1)',
+                                            borderWidth: 1
+                                        },
+                                        {
+                                            label: 'Plantilla',
+                                            data: data.map(d => d.teamValue / 1000000),
+                                            backgroundColor: 'rgba(34, 197, 94, 0.7)',
+                                            borderColor: 'rgba(34, 197, 94, 1)',
+                                            borderWidth: 1
+                                        }
+                                    ]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: { labels: { color: '#9ca3af' } }
+                                    },
+                                    scales: {
+                                        x: {
+                                            stacked: true,
+                                            ticks: { color: '#9ca3af' },
+                                            grid: { color: 'rgba(255,255,255,0.05)' }
+                                        },
+                                        y: {
+                                            stacked: true,
+                                            ticks: {
+                                                color: '#9ca3af',
+                                                callback: v => v + 'M€'
+                                            },
+                                            grid: { color: 'rgba(255,255,255,0.05)' }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+
+                        // Activity Chart - Trading volume by manager
+                        const activityCtx = document.getElementById('activityChart');
+                        if (activityCtx) {
+                            const managerActivity = {};
+                            Object.keys(this.managers).forEach(m => {
+                                managerActivity[m] = { buys: 0, sales: 0 };
+                            });
+
+                            this.movements.filter(m => m.type === 'transfer').forEach(m => {
+                                if (managerActivity[m.buyer]) managerActivity[m.buyer].buys++;
+                                if (managerActivity[m.seller]) managerActivity[m.seller].sales++;
+                            });
+
+                            const labels = Object.keys(managerActivity).map(n => n.split(' ')[0]);
+                            const buys = Object.values(managerActivity).map(v => v.buys);
+                            const sales = Object.values(managerActivity).map(v => v.sales);
+
+                            if (this.activityChart) {
+                                this.activityChart.destroy();
+                            }
+
+                            this.activityChart = new Chart(activityCtx, {
+                                type: 'bar',
+                                data: {
+                                    labels,
+                                    datasets: [
+                                        {
+                                            label: 'Compras',
+                                            data: buys,
+                                            backgroundColor: 'rgba(34, 197, 94, 0.7)',
+                                            borderColor: 'rgba(34, 197, 94, 1)',
+                                            borderWidth: 1
+                                        },
+                                        {
+                                            label: 'Ventas',
+                                            data: sales,
+                                            backgroundColor: 'rgba(239, 68, 68, 0.7)',
+                                            borderColor: 'rgba(239, 68, 68, 1)',
+                                            borderWidth: 1
+                                        }
+                                    ]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    plugins: {
+                                        legend: { labels: { color: '#9ca3af' } }
+                                    },
+                                    scales: {
+                                        x: {
+                                            ticks: { color: '#9ca3af' },
+                                            grid: { color: 'rgba(255,255,255,0.05)' }
+                                        },
+                                        y: {
+                                            ticks: { color: '#9ca3af' },
+                                            grid: { color: 'rgba(255,255,255,0.05)' }
+                                        }
+                                    }
+                                }
+                            });
+                        }
+                    });
                 },
 
                 formatMoney(amount) {
