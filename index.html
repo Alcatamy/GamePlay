@@ -1334,42 +1334,22 @@
                     <tbody>
                         <template x-for="(mov, idx) in (() => {
                             let filtered = [...movements];
-                            // Search filter - with null safety
                             if (movementsTab.searchQuery) {
                                 const q = movementsTab.searchQuery.toLowerCase();
-                                filtered = filtered.filter(m => 
-                                    (m.player && m.player.toLowerCase().includes(q)) || 
-                                    (m.buyer && m.buyer.toLowerCase().includes(q)) || 
-                                    (m.seller && m.seller.toLowerCase().includes(q)) ||
-                                    (m.beneficiary && m.beneficiary.toLowerCase().includes(q))
-                                );
+                                filtered = filtered.filter(m => (m.player && m.player.toLowerCase().includes(q)) || (m.buyer && m.buyer.toLowerCase().includes(q)) || (m.seller && m.seller.toLowerCase().includes(q)) || (m.beneficiary && m.beneficiary.toLowerCase().includes(q)));
                             }
-                            // Manager filter - with null safety
                             if (movementsTab.managerFilter !== 'all') {
-                                filtered = filtered.filter(m => 
-                                    m.buyer === movementsTab.managerFilter || 
-                                    m.seller === movementsTab.managerFilter ||
-                                    m.beneficiary === movementsTab.managerFilter
-                                );
+                                filtered = filtered.filter(m => m.buyer === movementsTab.managerFilter || m.seller === movementsTab.managerFilter || m.beneficiary === movementsTab.managerFilter);
                             }
-                            // Type filter
                             if (movementsTab.typeFilter !== 'all') {
                                 filtered = filtered.filter(m => m.type === movementsTab.typeFilter);
                             }
-                            // Sort by date (newest first, " Sin fecha" at very top) filtered.sort((a, b)=> {
-                            const parseD = (d) => {
-                            if (!d || d === 'Sin fecha') return Date.now(); // Sin fecha = most recent
-                            const dateOnly = d.split(' ')[0];
-                            const parts = dateOnly.split('/');
-                            if (parts.length >= 3) {
-                            return new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0])).getTime();
-                            }
-                            return 0;
-                            };
-                            return parseD(b.date) - parseD(a.date);
+                            filtered.sort((a, b) => {
+                                const parseD = (d) => { if (!d || d === 'Sin fecha') return Date.now(); const parts = d.split(' ')[0].split('/'); return parts.length >= 3 ? new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0])).getTime() : 0; };
+                                return parseD(b.date) - parseD(a.date);
                             });
                             return filtered.slice(0, 200);
-                            })()" :key="mov.id || (idx + '-' + mov.date)">
+                        })()" :key="mov.id || idx">
                             <tr class="border-b border-gray-800 hover:bg-gray-800/50">
                                 <td class="px-3 py-2 text-gray-400 text-xs" x-text="mov.date"></td>
                                 <td class="px-3 py-2">
