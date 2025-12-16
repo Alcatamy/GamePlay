@@ -1356,12 +1356,12 @@
                             if (movementsTab.typeFilter !== 'all') {
                                 filtered = filtered.filter(m => m.type === movementsTab.typeFilter);
                             }
-                            // Sort by date (newest first)
-                            filtered.sort((a, b) => {
-                                const parseD = (d) => {
-                                    if (!d || d === 'Sin fecha') return 0;
-                                    // Handle date+time format " DD/MM/YYYY HH:MM" const dateOnly=d.split(' ')[0];
-                                    const parts = dateOnly.split(' /'); if (parts.length>= 3) {
+                            // Sort by date (newest first, " Sin fecha" at very top) filtered.sort((a, b)=> {
+                            const parseD = (d) => {
+                            if (!d || d === 'Sin fecha') return Date.now(); // Sin fecha = most recent
+                            const dateOnly = d.split(' ')[0];
+                            const parts = dateOnly.split('/');
+                            if (parts.length >= 3) {
                             return new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0])).getTime();
                             }
                             return 0;
@@ -1949,6 +1949,32 @@
                             sales: m2Sales
                         }
                     };
+                },
+
+                // REMOVE DUPLICATE MOVEMENTS
+                removeDuplicates() {
+                    const seen = new Set();
+                    const unique = [];
+                    let removedCount = 0;
+
+                    this.movements.forEach(mov => {
+                        // Create a signature based on key fields (ignoring date variations)
+                        const sig = `${mov.type}_${mov.player || mov.beneficiary}_${mov.buyer || ''}_${mov.seller || ''}_${mov.amount}`;
+                        if (!seen.has(sig)) {
+                            seen.add(sig);
+                            unique.push(mov);
+                        } else {
+                            removedCount++;
+                        }
+                    });
+
+                    if (removedCount > 0) {
+                        this.movements = unique;
+                        this.saveData();
+                        this.addLog(`🧹 Eliminados ${removedCount} duplicados`, 'success');
+                    } else {
+                        this.addLog('✓ No se encontraron duplicados', 'info');
+                    }
                 },
 
                 // CSV EXPORT
