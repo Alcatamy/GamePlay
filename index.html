@@ -1294,7 +1294,8 @@
                                         }"
                                         x-text="mov.type === 'transfer' ? '🔄 Traspaso' : (mov.type === 'shield' ? '🛡️ Blindaje' : '🎁 Reward')"></span>
                                 </td>
-                                <td class="px-3 py-2 font-medium text-white" x-text="mov.player"></td>
+                                <td class="px-3 py-2 font-medium text-white" x-text="mov.player || mov.beneficiary">
+                                </td>
                                 <td class="px-3 py-2 text-red-400 cursor-pointer hover:underline"
                                     @click="selectedManagerDetail = mov.seller; showManagerModal = true"
                                     x-text="mov.seller"></td>
@@ -2549,6 +2550,31 @@
                     } else {
                         this.addLog('⚠️ No se encontraron valores de equipo válidos', 'warning');
                     }
+                },
+
+                // Helper to detect duplicates with fuzzy date
+                isDuplicate(newMov, existing) {
+                    if (newMov.type !== existing.type) return false;
+                    if (newMov.amount !== existing.amount) return false;
+
+                    // Specific checks
+                    if (newMov.type === 'transfer') {
+                        if (newMov.player !== existing.player) return false;
+                        if (newMov.buyer !== existing.buyer) return false;
+                        if (newMov.seller !== existing.seller) return false;
+                    } else {
+                        // For rewards/shields, check beneficiary and details
+                        if (newMov.beneficiary !== existing.beneficiary) return false;
+                        if (newMov.subtype !== existing.subtype) return false;
+                    }
+
+                    // Date Check (+/- 1 day tolerance)
+                    const d1 = this.parseDate(newMov.date);
+                    const d2 = this.parseDate(existing.date);
+                    const diffTime = Math.abs(d2 - d1);
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+                    return diffDays <= 1;
                 },
 
                 processInput() {
