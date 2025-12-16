@@ -1282,14 +1282,17 @@
                                 else if (movementsTab.sortBy === 'amount') cmp = (b.amount || 0) - (a.amount || 0);
                                 return movementsTab.sortDir === 'asc' ? -cmp : cmp;
                             });
-                            return filtered.slice(0, 200);
+                            return filtered;
                         })()" :key="mov.id || idx">
                             <tr class="border-b border-gray-800 hover:bg-gray-800/50">
                                 <td class="px-3 py-2 text-gray-400 text-xs" x-text="mov.date"></td>
                                 <td class="px-3 py-2">
-                                    <span class="px-2 py-0.5 rounded text-xs font-bold"
-                                        :class="mov.type === 'transfer' ? 'bg-blue-500/20 text-blue-400' : 'bg-green-500/20 text-green-400'"
-                                        x-text="mov.type === 'transfer' ? '🔄 Traspaso' : '🎁 Reward'"></span>
+                                    <span class="px-2 py-0.5 rounded text-xs font-bold" :class="{
+                                            'bg-blue-500/20 text-blue-400': mov.type === 'transfer',
+                                            'bg-green-500/20 text-green-400': mov.type === 'reward',
+                                            'bg-gray-500/20 text-gray-300': mov.type === 'shield'
+                                        }"
+                                        x-text="mov.type === 'transfer' ? '🔄 Traspaso' : (mov.type === 'shield' ? '🛡️ Blindaje' : '🎁 Reward')"></span>
                                 </td>
                                 <td class="px-3 py-2 font-medium text-white" x-text="mov.player"></td>
                                 <td class="px-3 py-2 text-red-400 cursor-pointer hover:underline"
@@ -1525,6 +1528,8 @@
                 movements: [], // Array flat de todos los movimientos
                 pendingMovements: [], // Staging area
                 marketData: typeof MARKET_DATA !== 'undefined' ? MARKET_DATA : {},
+                marketTrends: {},
+                marketInfo: {},
                 filters: {
                     search: '',
                     team: 'all',
@@ -1565,6 +1570,9 @@
                     sortBy: 'date',     // date, type, player, amount
                     sortDir: 'desc'     // asc, desc
                 },
+
+                // ANALYTICS TAB STATE
+                analyticsTab: 'financial', // financial, performance, market
 
                 // MANAGER DETAIL MODAL
                 selectedManagerDetail: null,
@@ -2378,40 +2386,64 @@
 
                 // DATA PROCESSING
                 parseMarketData(htmlContent) {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(htmlContent, 'text/html');
+                    const managerNodes = doc.querySelectorAll('p[class*="MuiTypography-body2"]'); // Player Names usually here
+                    let updatedCount = 0;
+
+                    if (managerNodes.length === 0) {
+                        this.addLog('No se encontraron nodos de jugador (DOM). Probando Regex...', 'info');
+                        this.parseMarketDataRegex(htmlContent);
+                        return;
+                    }
+
                     try {
-                        const parser = new DOMParser();
-                        const doc = parser.parseFromString(htmlContent, 'text/html');
-                        // Strategy: Look for specific class structures
-                        // Cards usually share a common class or structure. 
-                        // We found names in 'MuiTypography-body2' and price in 'MuiTypography-body1'.
-
-                        const nameNodes = Array.from(doc.querySelectorAll('p[class*="MuiTypography-body2"]'));
-                        let updatedCount = 0;
-
-                        nameNodes.forEach(node => {
+                        managerNodes.forEach(node => {
                             const name = node.textContent.trim();
-                            // Value is usually in the NEXT sibling container or similar structure.
-                            // Looking at the provided HTML structure:
-                            // Name is inside a div.
-                            // Market Value is inside the same parent container, usually a <p> with body1 class coming AFTER the name div.
-
-                            // Traverse up to the card container might be safer, but let's try finding the next body1.
-                            // The HTML showed: <div>...<p name>...</div> <p value>...
+                            if (!name) return;
 
                             // Attempt to find value node in proximity
-                            // We can use a Regex on the `innerHTML` of the parent card to be safer if DOM traversal is tricky.
-                            // But let's try DOM traversal:
-                            // Go up to the card wrapper (usually contains the image, name, values)
+                            // Go up to the card wrapper (contains image, name, values)
                             let cardParams = node.closest('div.MuiBox-root.css-1j0r1in') || node.parentElement.parentElement;
 
                             if (cardParams) {
-                                const valueNode = cardParams.querySelector('p[class*="MuiTypography-body1"]');
-                                if (valueNode) {
-                                    const valStr = valueNode.textContent.replace(/[€\.]/g, '').trim();
-                                    const val = parseInt(valStr);
+                                // 1. Extract Value and Trend
+                                const valueNodes = cardParams.querySelectorAll('p[class*="MuiTypography-body1"]');
+                                let val = 0;
+                                let trendVal = 0;
+
+                                if (valueNodes.length >= 1) {
+                                    const valStr = valueNodes[0].textContent.replace(/[€\.\s]/g, '').trim();
+                                    val = parseInt(valStr);
                                     if (!isNaN(val)) {
                                         this.marketData[name] = val;
                                         updatedCount++;
+                                    }
+                                }
+
+                                if (valueNodes.length >= 2) {
+                                    // Trend is usually the second number
+                                    const trendStr = valueNodes[1].textContent.replace(/[€\.\s]/g, '').trim();
+                                    trendVal = parseInt(trendStr);
+
+                                    if (!isNaN(trendVal)) {
+                                        const previousValue = val - trendVal;
+                                        const trendPct = previousValue !== 0 ? (trendVal / previousValue) * 100 : 0;
+
+                                        this.marketTrends[name] = {
+                                            trend: trendVal,
+                                            trendPct: trendPct
+                                        };
+                                    }
+                                }
+
+                                // 2. Extract Position
+                                const positionNode = cardParams.querySelector('div[class*="position-color-"]');
+                                if (positionNode) {
+                                    const pos = positionNode.textContent.trim();
+                                    if (pos) {
+                                        if (!this.marketInfo[name]) this.marketInfo[name] = {};
+                                        this.marketInfo[name].position = pos;
                                     }
                                 }
                             }
@@ -2419,31 +2451,58 @@
 
                         this.addLog(`Mercado actualizado: ${updatedCount} jugadores.`, 'success');
                         this.debouncedSaveData();
-                        this.debouncedUpdateCharts(); // Recalc stats
+                        this.debouncedUpdateCharts();
 
                     } catch (e) {
                         console.error(e);
                         this.addLog('Error analizando HTML de mercado', 'error');
-                        // Fallback to Regex if DOM fails?
                         this.parseMarketDataRegex(htmlContent);
                     }
                 },
 
                 parseMarketDataRegex(text) {
                     // Fallback Regex
-                    const parts = text.split('class="MuiBox-root css-1j0r1in"');
+                    // "css-1j0r1in" seems to be the card wrapper
+                    const parts = text.split('css-1j0r1in');
                     let count = 0;
+
                     parts.forEach(part => {
                         const nameMatch = part.match(/MuiTypography-body2[^>]*>\s*([^<]+)<\/p>/);
-                        const valMatch = part.match(/MuiTypography-body1[^>]*>\s*([\d\.]+) €<\/p>/);
 
-                        if (nameMatch && valMatch) {
+                        // Simplified approach: Regex for all body1 matches
+                        const body1Matches = [...part.matchAll(/MuiTypography-body1[^>]*>\s*([-+]?[\d\.\s]+) €<\/p>/g)];
+                        const posMatch = part.match(/position-color-([a-z]+)[^>]*>\s*([A-Z]+)<\/div>/);
+
+                        if (nameMatch && body1Matches.length > 0) {
                             const name = nameMatch[1].trim();
-                            const val = parseInt(valMatch[1].replace(/\./g, ''));
-                            this.marketData[name] = val;
-                            count++;
+                            const valStr = body1Matches[0][1].replace(/[\.\s]/g, ''); // Remove dots and spaces
+                            const val = parseInt(valStr);
+
+                            if (!isNaN(val)) {
+                                this.marketData[name] = val;
+                                count++;
+
+                                // Trend
+                                if (body1Matches.length > 1) {
+                                    const trendStr = body1Matches[1][1].replace(/[\.\s]/g, '');
+                                    const trendVal = parseInt(trendStr);
+                                    if (!isNaN(trendVal)) {
+                                        const prev = val - trendVal;
+                                        const pct = prev !== 0 ? (trendVal / prev) * 100 : 0;
+                                        this.marketTrends[name] = { trend: trendVal, trendPct: pct };
+                                    }
+                                }
+                            }
+
+                            // Position
+                            if (posMatch) {
+                                const pos = posMatch[2].trim(); // "DL", "MC"...
+                                if (!this.marketInfo[name]) this.marketInfo[name] = {};
+                                this.marketInfo[name].position = pos;
+                            }
                         }
                     });
+
                     if (count > 0) this.addLog(`Mercado actualizado (Regex): ${count} jugadores.`, 'success');
                 },
 
@@ -2527,25 +2586,42 @@
 
                     const reSmartFormat = /^\[([^\]]+)\] (.+)/;
                     const reDate = /(\d{2}\/\d{2}\/\d{4})/;
+                    const reDateHoyAyer = /^(Hoy|Ayer)$/i;
+                    const reDateShort = /^(\d{1,2})\s+(ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)/i;
                     const reTransfer = /(.+?) ha (comprado|vendido) al jugador (.+?) (?:de|a) (.+?) por ([\d\.]+)[€]?/;
                     const reShield = /(.+?) ha blindado a (.+)/i;
                     const reRewardJornada = /En la jornada (\d+), (.+?) ha ganado ([\d\.]+)[€]?/i;
                     const reReward11 = /(.+?) ha ganado ([\d\.]+)[€]? por tener.+11 ideal/i;
+                    const reAdminMoney = /(.+?) ha recibido un abono de ([\d\.]+)[€]?/i;
 
                     const normalizeDate = (dateStr) => {
-                        if (!dateStr || dateStr === 'NODATE') return 'Sin fecha';
+                        if (!dateStr || dateStr === 'NODATE') return new Date().toLocaleDateString('es-ES');
                         const today = new Date();
                         const dd = (d) => String(d.getDate()).padStart(2, '0');
                         const mm = (d) => String(d.getMonth() + 1).padStart(2, '0');
                         const yyyy = (d) => d.getFullYear();
                         const formatDate = (d) => `${dd(d)}/${mm(d)}/${yyyy(d)}`;
-                        if (/^\d{1,2}:\d{2}$/.test(dateStr)) return `${formatDate(today)} ${dateStr}`;
-                        if (/^\d{2}\/\d{2}\/\d{4}/.test(dateStr)) return dateStr;
-                        if (/^ayer$/i.test(dateStr.trim())) {
+
+                        if (/^Hoy$/i.test(dateStr.trim())) return formatDate(today);
+                        if (/^Ayer$/i.test(dateStr.trim())) {
                             const yesterday = new Date(today);
                             yesterday.setDate(today.getDate() - 1);
                             return formatDate(yesterday);
                         }
+
+                        const shortMatch = dateStr.match(reDateShort);
+                        if (shortMatch) {
+                            const day = parseInt(shortMatch[1]);
+                            const monthStr = shortMatch[2].toLowerCase();
+                            const months = { ene: 0, feb: 1, mar: 2, abr: 3, may: 4, jun: 5, jul: 6, ago: 7, sep: 8, oct: 9, nov: 10, dic: 11 };
+                            const year = today.getFullYear();
+                            const d = new Date(year, months[monthStr], day);
+                            return formatDate(d);
+                        }
+
+                        if (/^\d{1,2}:\d{2}$/.test(dateStr)) return `${formatDate(today)} ${dateStr}`;
+                        if (/^\d{2}\/\d{2}\/\d{4}/.test(dateStr)) return dateStr;
+
                         const haceDiasMatch = dateStr.match(/hace\s+(\d+)\s+d[ií]as?/i);
                         if (haceDiasMatch) {
                             const daysAgo = parseInt(haceDiasMatch[1]);
@@ -2553,7 +2629,6 @@
                             pastDate.setDate(today.getDate() - daysAgo);
                             return formatDate(pastDate);
                         }
-                        if (/hace\s+\d+\s+horas?/i.test(dateStr)) return formatDate(today);
                         return dateStr;
                     };
 
@@ -2570,6 +2645,12 @@
                             textToParse = smartMatch[2];
                         } else if (reDate.test(line)) {
                             tempDate = line.match(reDate)[1];
+                            return;
+                        } else if (reDateHoyAyer.test(line)) {
+                            tempDate = line;
+                            return;
+                        } else if (reDateShort.test(line)) {
+                            tempDate = line;
                             return;
                         }
 
@@ -2625,10 +2706,18 @@
                             const [_, manager, player] = match;
                             const normalizedDateForId = normalizeDate(dateKey);
                             const id = `shield_${normalizedDateForId}_${manager.trim()}_${player.trim()}`;
-                            if (!pendingIds.has(id)) { // Simplistic check for shields ok
+                            if (!pendingIds.has(id)) {
                                 pendingIds.add(id);
                                 this.pendingMovements.push({
-                                    id, type: 'shield', beneficiary: manager.trim(), player: player.trim(), amount: 0, details: 'Blindaje', date: normalizedDateForId
+                                    id,
+                                    type: 'shield',
+                                    beneficiary: manager.trim(),
+                                    player: player.trim(),
+                                    buyer: manager.trim(), // Manager who shielded
+                                    seller: 'Liga',        // Virtual seller
+                                    amount: 0,
+                                    details: 'Blindaje',
+                                    date: normalizedDateForId
                                 });
                             }
                             return;
@@ -2639,11 +2728,21 @@
                         if (match) {
                             const [_, jornada, beneficiary, amountStr] = match;
                             const amount = parseInt(amountStr.replace(/\./g, ''));
-                            const id = `reward_jor${jornada}_${beneficiary.trim()}`;
+                            const normalizedDateForId = normalizeDate(dateKey);
+                            const id = `reward_jor${jornada}_${beneficiary.trim()}_${normalizedDateForId}`;
                             if (!pendingIds.has(id)) {
                                 pendingIds.add(id);
                                 this.pendingMovements.push({
-                                    id, type: 'reward', subtype: 'jornada', beneficiary: beneficiary.trim(), amount, details: `Jornada ${jornada}`, date: normalizeDate(dateKey)
+                                    id,
+                                    type: 'reward',
+                                    subtype: 'jornada',
+                                    beneficiary: beneficiary.trim(),
+                                    buyer: beneficiary.trim(),
+                                    seller: 'Liga',
+                                    player: beneficiary.trim(), // Set Manager Name as Player for display
+                                    amount,
+                                    details: `Jornada ${jornada}`,
+                                    date: normalizedDateForId
                                 });
                             }
                             return;
@@ -2659,7 +2758,41 @@
                             if (!pendingIds.has(id)) {
                                 pendingIds.add(id);
                                 this.pendingMovements.push({
-                                    id, type: 'reward', subtype: '11ideal', beneficiary: beneficiary.trim(), amount, details: '11 Ideal', date: normalizedDateForId
+                                    id,
+                                    type: 'reward',
+                                    subtype: '11ideal',
+                                    beneficiary: beneficiary.trim(),
+                                    buyer: beneficiary.trim(),
+                                    seller: 'Liga',
+                                    player: beneficiary.trim(),
+                                    amount,
+                                    details: '11 Ideal',
+                                    date: normalizedDateForId
+                                });
+                            }
+                            return;
+                        }
+
+                        // 5. Abonos Genéricos
+                        match = textToParse.match(reAdminMoney);
+                        if (match) {
+                            const [_, beneficiary, amountStr] = match;
+                            const amount = parseInt(amountStr.replace(/\./g, ''));
+                            const normalizedDateForId = normalizeDate(dateKey);
+                            const id = `reward_admin_${beneficiary.trim()}_${normalizedDateForId}_${amount}`;
+                            if (!pendingIds.has(id)) {
+                                pendingIds.add(id);
+                                this.pendingMovements.push({
+                                    id,
+                                    type: 'reward',
+                                    subtype: 'admin',
+                                    beneficiary: beneficiary.trim(),
+                                    buyer: beneficiary.trim(),
+                                    seller: 'Admin',
+                                    player: beneficiary.trim(),
+                                    amount,
+                                    details: 'Abono',
+                                    date: normalizedDateForId
                                 });
                             }
                             return;
@@ -2810,6 +2943,8 @@
                         managers: this.managers,
                         movements: this.movements,
                         marketData: sanitizedMarketData, // Sanitized keys
+                        marketTrends: this.marketTrends,
+                        marketInfo: this.marketInfo,
                         lastUpdate: Date.now()
                     };
 
@@ -2839,6 +2974,8 @@
                                 // Load and Sanitize Managers
                                 let loadedManagers = val.managers || {};
                                 if (val.marketData) this.marketData = val.marketData; // Load dynamic market data
+                                if (val.marketTrends) this.marketTrends = val.marketTrends;
+                                if (val.marketInfo) this.marketInfo = val.marketInfo;
 
                                 // Official allowed keys
                                 const allowedKeys = ["Vigar FC", "GOLENCIERRO FC", "Pablinistan FC", "Alcatamy eSports By", "Visite La Manga FC", "Morenazos FC"];
@@ -2898,6 +3035,8 @@
                             });
 
                             this.movements = data.movements || [];
+                            if (data.marketTrends) this.marketTrends = data.marketTrends;
+                            if (data.marketInfo) this.marketInfo = data.marketInfo;
 
                             // MIGRATE MOVEMENTS (Local)
                             let corrected = 0;
@@ -2980,7 +3119,11 @@
                         initialBudgets[k] = this.managers[k].initialBudget;
                     });
 
+
                     const labels = [];
+                    // Activity Data
+                    const activityByDate = {};
+
                     const datasets = Object.keys(this.managers).map(k => ({
                         label: k,
                         data: [], // {x, y}
@@ -2999,6 +3142,10 @@
                     sortedMovs.forEach(m => {
                         // Apply Transaction
                         if (m.type === 'transfer') {
+                            const d = this.parseDate(m.date).toLocaleDateString('es-ES');
+                            if (!activityByDate[d]) activityByDate[d] = 0;
+                            activityByDate[d]++;
+
                             const amount = parseInt(m.amount);
                             if (balances[m.buyer] !== undefined) balances[m.buyer] -= amount;
                             if (balances[m.seller] !== undefined) balances[m.seller] += amount;
@@ -3082,6 +3229,40 @@
                             }
                         }
                     });
+
+                    // Activity Chart
+                    const ctxActivity = document.getElementById('activityChart');
+                    if (ctxActivity) {
+                        if (window.activityChart) window.activityChart.destroy();
+
+                        const actLabels = Object.keys(activityByDate).sort((a, b) => {
+                            const da = a.split('/'); const db = b.split('/');
+                            return new Date(da[2], da[1] - 1, da[0]) - new Date(db[2], db[1] - 1, db[0]);
+                        });
+                        const actData = actLabels.map(l => activityByDate[l]);
+
+                        window.activityChart = new Chart(ctxActivity, {
+                            type: 'bar',
+                            data: {
+                                labels: actLabels,
+                                datasets: [{
+                                    label: 'Operaciones',
+                                    data: actData,
+                                    backgroundColor: '#ebff00',
+                                    borderRadius: 4
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    x: { grid: { display: false }, ticks: { color: '#aaa' } },
+                                    y: { grid: { color: '#333' }, ticks: { color: '#aaa', precision: 0 } }
+                                }
+                            }
+                        });
+                    }
                 }
             }
         }
