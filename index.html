@@ -1229,10 +1229,16 @@
                     <span class="text-sm font-normal text-gray-400"
                         x-text="'(' + movements.length + ' operaciones)'"></span>
                 </h2>
-                <button @click="exportMovementsCSV()"
-                    class="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/50 rounded-lg text-sm font-medium flex items-center gap-2 transition-all">
-                    📁 Exportar CSV
-                </button>
+                <div class="flex gap-2">
+                    <button @click="removeDuplicates()"
+                        class="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/50 rounded-lg text-sm font-medium flex items-center gap-2 transition-all">
+                        🧹 Limpiar Duplicados
+                    </button>
+                    <button @click="exportMovementsCSV()"
+                        class="px-4 py-2 bg-green-500/20 hover:bg-green-500/30 text-green-400 border border-green-500/50 rounded-lg text-sm font-medium flex items-center gap-2 transition-all">
+                        📁 Exportar CSV
+                    </button>
+                </div>
             </div>
 
             <!-- Movement KPIs -->
@@ -1323,12 +1329,28 @@
                 <table class="w-full text-left text-sm">
                     <thead class="sticky top-0 bg-gray-900 z-10">
                         <tr class="text-gray-400 text-xs uppercase">
-                            <th class="px-3 py-2">Fecha</th>
-                            <th class="px-3 py-2">Tipo</th>
-                            <th class="px-3 py-2">Jugador</th>
+                            <th class="px-3 py-2 cursor-pointer hover:text-white"
+                                @click="movementsTab.sortBy = 'date'; movementsTab.sortDir = movementsTab.sortDir === 'desc' ? 'asc' : 'desc'">
+                                Fecha <span x-show="movementsTab.sortBy === 'date'"
+                                    x-text="movementsTab.sortDir === 'desc' ? '▼' : '▲'"></span>
+                            </th>
+                            <th class="px-3 py-2 cursor-pointer hover:text-white"
+                                @click="movementsTab.sortBy = 'type'; movementsTab.sortDir = movementsTab.sortDir === 'desc' ? 'asc' : 'desc'">
+                                Tipo <span x-show="movementsTab.sortBy === 'type'"
+                                    x-text="movementsTab.sortDir === 'desc' ? '▼' : '▲'"></span>
+                            </th>
+                            <th class="px-3 py-2 cursor-pointer hover:text-white"
+                                @click="movementsTab.sortBy = 'player'; movementsTab.sortDir = movementsTab.sortDir === 'desc' ? 'asc' : 'desc'">
+                                Jugador <span x-show="movementsTab.sortBy === 'player'"
+                                    x-text="movementsTab.sortDir === 'desc' ? '▼' : '▲'"></span>
+                            </th>
                             <th class="px-3 py-2">De</th>
                             <th class="px-3 py-2">A</th>
-                            <th class="px-3 py-2 text-right">Importe</th>
+                            <th class="px-3 py-2 text-right cursor-pointer hover:text-white"
+                                @click="movementsTab.sortBy = 'amount'; movementsTab.sortDir = movementsTab.sortDir === 'desc' ? 'asc' : 'desc'">
+                                Importe <span x-show="movementsTab.sortBy === 'amount'"
+                                    x-text="movementsTab.sortDir === 'desc' ? '▼' : '▲'"></span>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1345,8 +1367,13 @@
                                 filtered = filtered.filter(m => m.type === movementsTab.typeFilter);
                             }
                             filtered.sort((a, b) => {
-                                const parseD = (d) => { if (!d || d === 'Sin fecha') return Date.now(); const parts = d.split(' ')[0].split('/'); return parts.length >= 3 ? new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0])).getTime() : 0; };
-                                return parseD(b.date) - parseD(a.date);
+                                const parseD = (d) => { if (!d || d === 'Sin fecha') return Date.now(); const p = d.split(' ')[0].split('/'); return p.length >= 3 ? new Date(parseInt(p[2]), parseInt(p[1])-1, parseInt(p[0])).getTime() : 0; };
+                                let cmp = 0;
+                                if (movementsTab.sortBy === 'date') cmp = parseD(b.date) - parseD(a.date);
+                                else if (movementsTab.sortBy === 'type') cmp = (a.type || '').localeCompare(b.type || '');
+                                else if (movementsTab.sortBy === 'player') cmp = (a.player || a.beneficiary || '').localeCompare(b.player || b.beneficiary || '');
+                                else if (movementsTab.sortBy === 'amount') cmp = (b.amount || 0) - (a.amount || 0);
+                                return movementsTab.sortDir === 'asc' ? -cmp : cmp;
                             });
                             return filtered.slice(0, 200);
                         })()" :key="mov.id || idx">
@@ -1627,7 +1654,9 @@
                     managerFilter: 'all',
                     dateFrom: '',
                     dateTo: '',
-                    typeFilter: 'all'  // all, transfer, reward
+                    typeFilter: 'all',  // all, transfer, reward
+                    sortBy: 'date',     // date, type, player, amount
+                    sortDir: 'desc'     // asc, desc
                 },
 
                 // MANAGER DETAIL MODAL
