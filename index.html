@@ -1360,14 +1360,16 @@
                             filtered.sort((a, b) => {
                                 const parseD = (d) => {
                                     if (!d || d === 'Sin fecha') return 0;
-                                    const parts = d.split('/');
-                                    if (parts.length >= 3) return new Date(parts[2], parts[1]-1, parts[0]).getTime();
-                                    return 0;
-                                };
-                                return parseD(b.date) - parseD(a.date);
+                                    // Handle date+time format " DD/MM/YYYY HH:MM" const dateOnly=d.split(' ')[0];
+                                    const parts = dateOnly.split(' /'); if (parts.length>= 3) {
+                            return new Date(parseInt(parts[2]), parseInt(parts[1])-1, parseInt(parts[0])).getTime();
+                            }
+                            return 0;
+                            };
+                            return parseD(b.date) - parseD(a.date);
                             });
                             return filtered.slice(0, 200);
-                        })()" :key="idx + '-' + (mov.id || mov.date)">`
+                            })()" :key="mov.id || (idx + '-' + mov.date)">
                             <tr class="border-b border-gray-800 hover:bg-gray-800/50">
                                 <td class="px-3 py-2 text-gray-400 text-xs" x-text="mov.date"></td>
                                 <td class="px-3 py-2">
