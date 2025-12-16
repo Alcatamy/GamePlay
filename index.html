@@ -1230,6 +1230,10 @@
                         x-text="'(' + movements.length + ' operaciones)'"></span>
                 </h2>
                 <div class="flex gap-2">
+                    <button @click="resetData()"
+                        class="px-4 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 border border-yellow-500/50 rounded-lg text-sm font-medium flex items-center gap-2 transition-all">
+                        ⚠️ Restablecer Datos
+                    </button>
                     <button @click="removeDuplicates()"
                         class="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/50 rounded-lg text-sm font-medium flex items-center gap-2 transition-all">
                         🧹 Limpiar Duplicados
@@ -1960,30 +1964,85 @@
                     };
                 },
 
-                // REMOVE DUPLICATE MOVEMENTS
+                // REMOVE DUPLICATE MOVEMENTS (ROBUST)
+                parseDate(dateStr) {
+                    if (!dateStr || dateStr === 'Sin fecha' || dateStr === 'NODATE') return 0;
+                    const parts = dateStr.split(' ')[0].split('/');
+                    if (parts.length === 3) {
+                        return new Date(parseInt(parts[2]), parseInt(parts[1]) - 1, parseInt(parts[0])).getTime();
+                    }
+                    return 0;
+                },
+
+                isDuplicate(m1, m2) {
+                    if (m1.player !== m2.player) return false;
+                    if (m1.buyer !== m2.buyer) return false;
+                    if (m1.seller !== m2.seller) return false;
+                    if (parseInt(m1.amount) !== parseInt(m2.amount)) return false;
+
+                    const t1 = this.parseDate(m1.date);
+                    const t2 = this.parseDate(m2.date);
+                    // 24 hours tolerance (86400000 ms)
+                    return Math.abs(t1 - t2) <= 86400000;
+                },
+
                 removeDuplicates() {
-                    const seen = new Set();
                     const unique = [];
-                    let removedCount = 0;
+                    const duplicates = [];
+
+                    // Sort by date desc to keep most recent versions preferred? 
+                    // Actually we iterate and check if we already have a match.
+                    // O(N^2) is bad for 3000 items (9M ops). 
+                    // Optimization: Group by player+amount signature?
+
+                    const signatureMap = new Map();
 
                     this.movements.forEach(mov => {
-                        // Create a signature based on key fields (ignoring date variations)
-                        const sig = `${mov.type}_${mov.player || mov.beneficiary}_${mov.buyer || ''}_${mov.seller || ''}_${mov.amount}`;
-                        if (!seen.has(sig)) {
-                            seen.add(sig);
+                        const sig = `${mov.player}_${mov.amount}`;
+                        if (!signatureMap.has(sig)) {
+                            signatureMap.set(sig, []);
+                        }
+
+                        // Check against potential duplicates in same signature group
+                        const potentials = signatureMap.get(sig);
+                        const isDup = potentials.some(existing => this.isDuplicate(mov, existing));
+
+                        if (!isDup) {
+                            potentials.push(mov);
                             unique.push(mov);
                         } else {
-                            removedCount++;
+                            duplicates.push(mov);
                         }
                     });
 
-                    if (removedCount > 0) {
+                    if (duplicates.length > 0) {
                         this.movements = unique;
                         this.saveData();
-                        this.addLog(`🧹 Eliminados ${removedCount} duplicados`, 'success');
+                        this.addLog(`🧹 Eliminados ${duplicates.length} duplicados (Robusto)`, 'success');
                     } else {
                         this.addLog('✓ No se encontraron duplicados', 'info');
                     }
+                },
+
+                // RESET DATA
+                async resetData() {
+                    if (!confirm('¿Estás seguro de que quieres borrar todo y restablecer los datos originales? Esta acción no se puede deshacer.')) return;
+
+                    this.movements = [];
+                    this.pendingMovements = [];
+                    this.marketData = {};
+                    this.addLog('🧹 Datos borrados. Iniciando restablecimiento...', 'info');
+
+                    // Use DEFAULT_MOVEMENTS from movements_data.js
+                    if (typeof DEFAULT_MOVEMENTS !== 'undefined') {
+                        this.rawInput = DEFAULT_MOVEMENTS;
+                        this.processInput();
+                        this.confirmImport();
+                        this.addLog('✅ Datos restablecidos correctamente desde archivo original.', 'success');
+                    } else {
+                        this.addLog('⚠️ No se encontró DEFAULT_MOVEMENTS.', 'error');
+                    }
+                    this.saveData();
                 },
 
                 // CSV EXPORT
@@ -2544,61 +2603,46 @@
                     }
 
                     // ⚡ DETECCIÓN VALORES DE EQUIPO (formato PFSY)
-                    // Formato: TeamName\nRank\nScore PFSY\n[€]\nValue
                     if (text.includes('PFSY') && (text.includes('Alcatamy') || text.includes('Vigar') || text.includes('GOLENCIERRO') || text.includes('Pablinistan') || text.includes('Morenazos') || text.includes('Manga'))) {
                         this.parseTeamValues(text);
                         return;
                     }
 
-                    // ⚡ OPTIMIZACIÓN: Usar Set para O(1) lookups
-                    const existingIds = new Set(this.movements.map(m => m.id));
+                    // ⚡ OPTIMIZACIÓN: Build signature map for efficient duplicate checking
+                    // Signature: player_amount (since these are most distinguishing factors usually)
+                    const existingSignatureMap = new Map();
+                    this.movements.forEach(m => {
+                        const sig = `${m.player}_${m.amount}`;
+                        if (!existingSignatureMap.has(sig)) existingSignatureMap.set(sig, []);
+                        existingSignatureMap.get(sig).push(m);
+                    });
+
                     const pendingIds = new Set(this.pendingMovements.map(m => m.id));
 
                     const lines = text.split('\n');
-                    let tempDate = null; // Para guardar fechas "sueltas" (ej: "04/12/2025") que aparecen entre líneas
+                    let tempDate = null;
 
-                    // Pre-procesar para capturar fechas aisladas y asignarlas a bloques cercanos
-                    // Nota: El usuario pega bloques donde la fecha a veces está ABAJO del movimiento.
-                    // Estrategia: Iterar y buscar patrones.
-
-                    // Regex Patterns
-                    // Soporta: [DD/MM/YYYY] o [Hace X días] o [Ayer] o cualquier texto entre corchetes
-                    const reSmartFormat = /^\[([^\]]+)\] (.+)/;  // [Cualquier fecha] Mensaje
+                    const reSmartFormat = /^\[([^\]]+)\] (.+)/;
                     const reDate = /(\d{2}\/\d{2}\/\d{4})/;
                     const reTransfer = /(.+?) ha (comprado|vendido) al jugador (.+?) (?:de|a) (.+?) por ([\d\.]+)[€]?/;
                     const reShield = /(.+?) ha blindado a (.+)/i;
                     const reRewardJornada = /En la jornada (\d+), (.+?) ha ganado ([\d\.]+)[€]?/i;
                     const reReward11 = /(.+?) ha ganado ([\d\.]+)[€]? por tener.+11 ideal/i;
-                    const reTeamValue = /([^\n]+)\s+(\d+)\s+PFSY\s+([\d\.]+)/;
 
-                    // Función para normalizar fechas (convierte fechas relativas a absolutas)
                     const normalizeDate = (dateStr) => {
                         if (!dateStr || dateStr === 'NODATE') return 'Sin fecha';
-
                         const today = new Date();
                         const dd = (d) => String(d.getDate()).padStart(2, '0');
                         const mm = (d) => String(d.getMonth() + 1).padStart(2, '0');
                         const yyyy = (d) => d.getFullYear();
                         const formatDate = (d) => `${dd(d)}/${mm(d)}/${yyyy(d)}`;
-
-                        // Si es solo hora (ej: "20:37" o "14:30"), añadir fecha de hoy
-                        if (/^\d{1,2}:\d{2}$/.test(dateStr)) {
-                            return `${formatDate(today)} ${dateStr}`;
-                        }
-
-                        // Si ya es fecha completa DD/MM/YYYY, devolverla tal cual
-                        if (/^\d{2}\/\d{2}\/\d{4}/.test(dateStr)) {
-                            return dateStr;
-                        }
-
-                        // Convertir "Ayer" a fecha absoluta
+                        if (/^\d{1,2}:\d{2}$/.test(dateStr)) return `${formatDate(today)} ${dateStr}`;
+                        if (/^\d{2}\/\d{2}\/\d{4}/.test(dateStr)) return dateStr;
                         if (/^ayer$/i.test(dateStr.trim())) {
                             const yesterday = new Date(today);
                             yesterday.setDate(today.getDate() - 1);
                             return formatDate(yesterday);
                         }
-
-                        // Convertir "Hace X días" a fecha absoluta
                         const haceDiasMatch = dateStr.match(/hace\s+(\d+)\s+d[ií]as?/i);
                         if (haceDiasMatch) {
                             const daysAgo = parseInt(haceDiasMatch[1]);
@@ -2606,43 +2650,20 @@
                             pastDate.setDate(today.getDate() - daysAgo);
                             return formatDate(pastDate);
                         }
-
-                        // Convertir "Hace X horas" a fecha de hoy
-                        if (/hace\s+\d+\s+horas?/i.test(dateStr)) {
-                            return formatDate(today);
-                        }
-
-                        // Para otros formatos desconocidos, devolver como está
+                        if (/hace\s+\d+\s+horas?/i.test(dateStr)) return formatDate(today);
                         return dateStr;
                     };
 
-                    // Estrategia para Team Values (Formato raro de lista)
-                    // Buscaremos patrones de bloque "Nombre \n Num \n PFSY \n Valor" en todo el texto raw
-                    const teamValueMatches = [...text.matchAll(/([^\n\r]+)[\n\r]+\d+[\n\r]+PFSY[\n\r]+([\d\.]+)/g)];
-                    teamValueMatches.forEach(match => {
-                        const managerName = match[1].trim();
-                        const valueRaw = match[2].replace(/\./g, '');
-                        const val = parseInt(valueRaw);
-
-                        if (this.managers[managerName]) {
-                            this.managers[managerName].teamValue = val;
-                            addedCount++;
-                            this.addLog(`Valor equipo actualizado: ${managerName} -> ${this.formatMoney(val)}`, 'success');
-                        }
-                    });
-
-                    // Estrategia para Movimientos línea por línea
                     lines.forEach((line, index) => {
                         line = line.trim();
-                        if (!line || line.startsWith('#') || line.startsWith('---')) return; // Ignore headers
+                        if (!line || line.startsWith('#') || line.startsWith('---')) return;
 
                         let currentDateForLine = tempDate;
                         let textToParse = line;
 
-                        // Check for [Date] Text format (supports any date format)
                         const smartMatch = line.match(reSmartFormat);
                         if (smartMatch) {
-                            currentDateForLine = smartMatch[1].trim();  // "Hace 9 días", "Ayer", "14/12/2025", etc.
+                            currentDateForLine = smartMatch[1].trim();
                             textToParse = smartMatch[2];
                         } else if (reDate.test(line)) {
                             tempDate = line.match(reDate)[1];
@@ -2660,42 +2681,51 @@
                             const seller = action === 'comprado' ? otherParty.trim() : actor.trim();
                             const normalizedDateForId = normalizeDate(dateKey);
 
-                            // ID UNIQUE with NORMALIZED DATE (prevents duplicates from relative dates)
-                            const id = `transfer_${normalizedDateForId}_${buyer}_${seller}_${player}_${amount}`;
+                            const newMov = {
+                                id: `transfer_${normalizedDateForId}_${buyer}_${seller}_${player}_${amount}`,
+                                type: 'transfer',
+                                buyer,
+                                seller,
+                                player,
+                                amount,
+                                date: normalizedDateForId
+                            };
 
-                            // ⚡ O(1) lookup en lugar de O(n)
-                            if (!pendingIds.has(id) && !existingIds.has(id)) {
-                                pendingIds.add(id);
-                                this.pendingMovements.push({
-                                    id,
-                                    type: 'transfer',
-                                    buyer,
-                                    seller,
-                                    player,
-                                    amount,
-                                    date: normalizedDateForId
-                                });
+                            // Duplicate Check (Robust)
+                            const sig = `${player}_${amount}`;
+                            const potentials = existingSignatureMap.get(sig);
+                            let isDup = false;
+
+                            if (potentials) {
+                                isDup = potentials.some(existing => this.isDuplicate(newMov, existing));
+                            }
+
+                            if (!isDup && !pendingIds.has(newMov.id)) {
+                                pendingIds.add(newMov.id);
+                                this.pendingMovements.push(newMov);
+
+                                // Update map locally to catch dups within same import
+                                if (!existingSignatureMap.has(sig)) existingSignatureMap.set(sig, []);
+                                existingSignatureMap.get(sig).push(newMov);
                             }
                             return;
                         }
 
-                        // 2. Blindajes (Nuevo)
+                        // Pass-through simpler logic for other types (less prone to fuzzy dupes)
+                        // ... (Logic for shields/rewards kept similar but reusing robust flow if needed)
+                        // For brevity, keeping simplest ID check for non-transfers or using same loop style?
+                        // Let's copy the original block for 2,3,4 but normalized
+
+                        // 2. Blindajes
                         match = textToParse.match(reShield);
                         if (match) {
                             const [_, manager, player] = match;
                             const normalizedDateForId = normalizeDate(dateKey);
                             const id = `shield_${normalizedDateForId}_${manager.trim()}_${player.trim()}`;
-
-                            if (!pendingIds.has(id) && !existingIds.has(id)) {
+                            if (!pendingIds.has(id)) { // Simplistic check for shields ok
                                 pendingIds.add(id);
                                 this.pendingMovements.push({
-                                    id,
-                                    type: 'shield',
-                                    beneficiary: manager.trim(),
-                                    player: player.trim(),
-                                    amount: 0,
-                                    details: 'Blindaje',
-                                    date: normalizedDateForId
+                                    id, type: 'shield', beneficiary: manager.trim(), player: player.trim(), amount: 0, details: 'Blindaje', date: normalizedDateForId
                                 });
                             }
                             return;
@@ -2707,17 +2737,10 @@
                             const [_, jornada, beneficiary, amountStr] = match;
                             const amount = parseInt(amountStr.replace(/\./g, ''));
                             const id = `reward_jor${jornada}_${beneficiary.trim()}`;
-
-                            if (!pendingIds.has(id) && !existingIds.has(id)) {
+                            if (!pendingIds.has(id)) {
                                 pendingIds.add(id);
                                 this.pendingMovements.push({
-                                    id,
-                                    type: 'reward',
-                                    subtype: 'jornada',
-                                    beneficiary: beneficiary.trim(),
-                                    amount,
-                                    details: `Jornada ${jornada}`,
-                                    date: normalizeDate(dateKey)
+                                    id, type: 'reward', subtype: 'jornada', beneficiary: beneficiary.trim(), amount, details: `Jornada ${jornada}`, date: normalizeDate(dateKey)
                                 });
                             }
                             return;
@@ -2730,17 +2753,10 @@
                             const amount = parseInt(amountStr.replace(/\./g, ''));
                             const normalizedDateForId = normalizeDate(dateKey);
                             const id = `reward_11_${beneficiary.trim()}_${normalizedDateForId}_${amount}`;
-
-                            if (!pendingIds.has(id) && !existingIds.has(id)) {
+                            if (!pendingIds.has(id)) {
                                 pendingIds.add(id);
                                 this.pendingMovements.push({
-                                    id,
-                                    type: 'reward',
-                                    subtype: '11ideal',
-                                    beneficiary: beneficiary.trim(),
-                                    amount,
-                                    details: '11 Ideal',
-                                    date: normalizedDateForId
+                                    id, type: 'reward', subtype: '11ideal', beneficiary: beneficiary.trim(), amount, details: '11 Ideal', date: normalizedDateForId
                                 });
                             }
                             return;
@@ -2767,16 +2783,52 @@
                     let newCount = 0;
                     let updatedCount = 0;
 
+                    // Reverse loop or unshift to keep order from parsed, but ensuring newest are at top?
+                    // Pending movements are in parsed order (Top to Bottom of text). 
+                    // Usually text is Newest First or Oldest First?
+                    // movimientos_smart.txt has newest at top.
+                    // So we should iterate pendingMovements in reverse if we want oldest processed first?
+                    // Or iterate normal and unshift so the first (newest) ends up at top of movements?
+
+                    // If we unshift:
+                    // input: [A, B, C] (A is newest)
+                    // 1. unshift A -> [A, ...]
+                    // 2. unshift B -> [B, A, ...] 
+                    // Wait, that puts B above A.
+                    // If A is newest, and we want newest at top (index 0).
+                    // We should iterate pending [A, B, C] in REVERSE: C, B, A.
+                    // C -> [C]
+                    // B -> [B, C]
+                    // A -> [A, B, C]
+                    // Correct.
+
+                    const toAdd = [];
                     this.pendingMovements.forEach(mov => {
+                        // Double check duplicate logic before final add
+                        // (Already done in processInput but good to be safe)
                         const existing = existingMap.get(mov.id);
                         if (!existing) {
-                            this.movements.push(mov);
-                            newCount++;
+                            toAdd.push(mov);
                         } else if (mov.date.includes('/') && !existing.date.includes('/')) {
                             existing.date = mov.date;
                             updatedCount++;
                         }
                     });
+
+                    // Add new ones to top in reverse order of the array (since array is likely newest first)
+                    // If array is [Newest, ..., Oldest]
+                    // We want: [Newest, ..., Oldest, Existing...]
+                    // So we can just splicing them in at 0?
+                    // this.movements.unshift(...toAdd);
+
+                    // But if toAdd is [A, B, C] (A newest), spread unshift adds them as A, B, C at start?
+                    // [].unshift(1, 2) -> [1, 2]
+                    // So yes, unshift(...toAdd) keeps order of toAdd and puts at front.
+
+                    if (toAdd.length > 0) {
+                        this.movements.unshift(...toAdd);
+                        newCount = toAdd.length;
+                    }
 
                     const elapsed = (performance.now() - startTime).toFixed(0);
                     this.addLog(`⚡ Importación: ${newCount} nuevos, ${updatedCount} actualizados (${elapsed}ms)`, 'success');
