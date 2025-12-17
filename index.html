@@ -96,6 +96,9 @@
             background: #4b5563;
         }
     </style>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="market_data.js"></script>
 </head>
 
 <body class="bg-gray-950 text-gray-100 min-h-screen selection:bg-neon-blue selection:text-black" x-data="gamePlayApp()"
@@ -121,6 +124,14 @@
                         <span x-show="syncStatus === 'syncing'" class="text-yellow-400 animate-pulse">⟳</span>
                         <span x-show="syncStatus === 'error'" class="text-red-400">✗</span>
                     </span>
+                    <button @click="loadData(); addLog('Datos recargados manualmente', 'info');"
+                        class="ml-2 p-1 text-gray-400 hover:text-white transition-colors"
+                        title="Recargar Datos Manualmente">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                    </button>
                 </div>
 
                 <!-- Desktop Navigation -->
@@ -710,6 +721,68 @@
                 <h3 class="text-white font-bold mb-4">Actividad de Fichajes por Día</h3>
                 <div style="height: 250px;">
                     <canvas id="activityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- MANAGER INTELLIGENCE -->
+            <div class="glass-panel p-6 rounded-xl">
+                <h3 class="text-white font-bold mb-6 text-lg flex items-center gap-2">
+                    🧠 Inteligencia de Managers
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Mayor Sobrepuja -->
+                    <div class="p-4 bg-gray-800/40 rounded-xl border border-gray-700">
+                        <div class="text-xs text-gray-400 uppercase mb-1">El Más Agresivo</div>
+                        <div class="text-lg font-bold text-red-400" x-text="(() => {
+                            const m = Object.values(managers).sort((a,b) => (getManagerAnalytics(b.name).avgSpread || 0) - (getManagerAnalytics(a.name).avgSpread || 0))[0];
+                            return m ? m.name : '-';
+                        })()"></div>
+                        <div class="text-sm text-gray-500" x-text="(() => {
+                            const m = Object.values(managers).sort((a,b) => (getManagerAnalytics(b.name).avgSpread || 0) - (getManagerAnalytics(a.name).avgSpread || 0))[0];
+                            return m ? '+' + (getManagerAnalytics(m.name).avgSpread || 0).toFixed(1) + '% sobre mercado' : '';
+                        })()"></div>
+                    </div>
+
+                    <!-- Menor Sobrepuja -->
+                    <div class="p-4 bg-gray-800/40 rounded-xl border border-gray-700">
+                        <div class="text-xs text-gray-400 uppercase mb-1">El Más Conservador</div>
+                        <div class="text-lg font-bold text-green-400" x-text="(() => {
+                            const m = Object.values(managers).filter(x => getManagerAnalytics(x.name).purchases?.length > 0)
+                                .sort((a,b) => (getManagerAnalytics(a.name).avgSpread || 0) - (getManagerAnalytics(b.name).avgSpread || 0))[0];
+                            return m ? m.name : '-';
+                        })()"></div>
+                        <div class="text-sm text-gray-500" x-text="(() => {
+                            const m = Object.values(managers).filter(x => getManagerAnalytics(x.name).purchases?.length > 0)
+                                .sort((a,b) => (getManagerAnalytics(a.name).avgSpread || 0) - (getManagerAnalytics(b.name).avgSpread || 0))[0];
+                            return m ? '+' + (getManagerAnalytics(m.name).avgSpread || 0).toFixed(1) + '% sobre mercado' : '';
+                        })()"></div>
+                    </div>
+
+                    <!-- El Sniper (+1) -->
+                    <div class="p-4 bg-gray-800/40 rounded-xl border border-gray-700">
+                        <div class="text-xs text-gray-400 uppercase mb-1">El Sniper (+1€)</div>
+                        <div class="text-lg font-bold text-purple-400" x-text="(() => {
+                            const m = Object.values(managers).sort((a,b) => (getManagerAnalytics(b.name).patterns?.plusOne || 0) - (getManagerAnalytics(a.name).patterns?.plusOne || 0))[0];
+                            return m ? m.name : '-';
+                        })()"></div>
+                        <div class="text-sm text-gray-500" x-text="(() => {
+                            const m = Object.values(managers).sort((a,b) => (getManagerAnalytics(b.name).patterns?.plusOne || 0) - (getManagerAnalytics(a.name).patterns?.plusOne || 0))[0];
+                            return m ? (getManagerAnalytics(m.name).patterns?.plusOne || 0) + ' pujas tipo +1€' : '';
+                        })()"></div>
+                    </div>
+
+                    <!-- El Volátil (Panic Sales) -->
+                    <div class="p-4 bg-gray-800/40 rounded-xl border border-gray-700">
+                        <div class="text-xs text-gray-400 uppercase mb-1">Manos de Mantequilla</div>
+                        <div class="text-lg font-bold text-orange-400" x-text="(() => {
+                            const m = Object.values(managers).sort((a,b) => (getManagerAnalytics(b.name).panicSales || 0) - (getManagerAnalytics(a.name).panicSales || 0))[0];
+                            return m ? m.name : '-';
+                        })()"></div>
+                        <div class="text-sm text-gray-500" x-text="(() => {
+                            const m = Object.values(managers).sort((a,b) => (getManagerAnalytics(b.name).panicSales || 0) - (getManagerAnalytics(a.name).panicSales || 0))[0];
+                            return m ? (getManagerAnalytics(m.name).panicSales || 0) + ' ventas rápidas (<3 días)' : '';
+                        })()"></div>
+                    </div>
                 </div>
             </div>
 
