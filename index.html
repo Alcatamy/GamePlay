@@ -597,7 +597,145 @@
                                 </tr>
                             </template>
                         </tbody>
+                </div>
+            </div>
+
+            <!-- DETAILED MANAGER RANKING TABLE -->
+            <div class="glass-panel p-6 rounded-xl">
+                <h3 class="text-white font-bold mb-6 text-lg flex items-center gap-2">
+                    🏆 Ranking Detallado de Managers
+                </h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="text-xs uppercase text-gray-500 bg-gray-900/20">
+                            <tr>
+                                <th class="p-3">#</th>
+                                <th class="p-3">Manager</th>
+                                <th class="p-3 text-right">Compras</th>
+                                <th class="p-3 text-right">Ventas</th>
+                                <th class="p-3 text-right">Total Gastado</th>
+                                <th class="p-3 text-right">Total Ingresado</th>
+                                <th class="p-3 text-right">Balance Neto</th>
+                                <th class="p-3 text-right">Premios</th>
+                                <th class="p-3 text-right">Patrimonio</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-800">
+                            <template x-for="(m, idx) in sortedManagers" :key="m.name">
+                                <tr class="hover:bg-white/5">
+                                    <td class="p-3 text-gray-500 font-bold" x-text="idx + 1"></td>
+                                    <td class="p-3 text-white font-medium" x-text="m.name"></td>
+                                    <td class="p-3 text-right text-blue-300"
+                                        x-text="movements.filter(mov => mov && mov.type === 'transfer' && mov.buyer === m.name).length">
+                                    </td>
+                                    <td class="p-3 text-right text-red-300"
+                                        x-text="movements.filter(mov => mov && mov.type === 'transfer' && mov.seller === m.name).length">
+                                    </td>
+                                    <td class="p-3 text-right text-red-400"
+                                        x-text="formatMoney(movements.filter(mov => mov && mov.type === 'transfer' && mov.buyer === m.name).reduce((s,mov) => s + (mov.amount || 0), 0))">
+                                    </td>
+                                    <td class="p-3 text-right text-green-400"
+                                        x-text="formatMoney(movements.filter(mov => mov && mov.type === 'transfer' && mov.seller === m.name).reduce((s,mov) => s + (mov.amount || 0), 0))">
+                                    </td>
+                                    <td class="p-3 text-right font-bold"
+                                        :class="m.balance >= 0 ? 'text-green-400' : 'text-red-400'"
+                                        x-text="formatMoney(m.balance)"></td>
+                                    <td class="p-3 text-right text-yellow-400"
+                                        x-text="formatMoney(movements.filter(mov => mov && mov.type === 'reward' && mov.beneficiary === m.name).reduce((s,mov) => s + (mov.amount || 0), 0))">
+                                    </td>
+                                    <td class="p-3 text-right font-bold text-neon-green"
+                                        x-text="formatMoney(m.balance + m.teamValue)"></td>
+                                </tr>
+                            </template>
+                        </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- PLAYER POPULARITY RANKING -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="glass-panel p-6 rounded-xl">
+                    <h3 class="text-white font-bold mb-4 flex items-center gap-2">
+                        🔥 Jugadores Más Transferidos
+                    </h3>
+                    <div class="space-y-2 max-h-80 overflow-y-auto">
+                        <template x-for="(entry, idx) in (() => {
+                            const counts = {};
+                            movements.filter(m => m && m.type === 'transfer').forEach(m => {
+                                counts[m.player] = (counts[m.player] || 0) + 1;
+                            });
+                            return Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, 15);
+                        })()" :key="entry[0]">
+                            <div class="flex justify-between items-center p-2 bg-gray-800/30 rounded">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-gray-500 font-bold w-6" x-text="idx + 1"></span>
+                                    <span class="text-white" x-text="entry[0]"></span>
+                                </div>
+                                <span class="text-neon-pink font-bold" x-text="entry[1] + ' ops'"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="glass-panel p-6 rounded-xl">
+                    <h3 class="text-white font-bold mb-4 flex items-center gap-2">
+                        💰 Jugadores con Mayor Volumen
+                    </h3>
+                    <div class="space-y-2 max-h-80 overflow-y-auto">
+                        <template x-for="(entry, idx) in (() => {
+                            const volumes = {};
+                            movements.filter(m => m && m.type === 'transfer').forEach(m => {
+                                volumes[m.player] = (volumes[m.player] || 0) + (m.amount || 0);
+                            });
+                            return Object.entries(volumes).sort((a,b) => b[1] - a[1]).slice(0, 15);
+                        })()" :key="entry[0]">
+                            <div class="flex justify-between items-center p-2 bg-gray-800/30 rounded">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-gray-500 font-bold w-6" x-text="idx + 1"></span>
+                                    <span class="text-white" x-text="entry[0]"></span>
+                                </div>
+                                <span class="text-neon-green font-bold" x-text="formatMoney(entry[1])"></span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ACTIVITY CHART -->
+            <div class="glass-panel p-6 rounded-xl">
+                <h3 class="text-white font-bold mb-4">Actividad de Fichajes por Día</h3>
+                <div style="height: 250px;">
+                    <canvas id="activityChart"></canvas>
+                </div>
+            </div>
+
+            <!-- MARKET INSIGHTS -->
+            <div class="glass-panel p-6 rounded-xl">
+                <h3 class="text-white font-bold mb-4 flex items-center gap-2">
+                    📈 Insights de Mercado
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="p-4 bg-gray-800/40 rounded-lg">
+                        <p class="text-xs text-gray-500 uppercase">Precio Medio por Operación</p>
+                        <p class="text-xl font-bold text-white" x-text="formatMoney(movements.filter(m => m && m.type === 'transfer').length > 0 ? 
+                                   movements.filter(m => m && m.type === 'transfer').reduce((s,m) => s + (m.amount || 0), 0) / 
+                                   movements.filter(m => m && m.type === 'transfer').length : 0)"></p>
+                    </div>
+                    <div class="p-4 bg-gray-800/40 rounded-lg">
+                        <p class="text-xs text-gray-500 uppercase">Operaciones LALIGA vs Managers</p>
+                        <p class="text-xl font-bold text-neon-blue" x-text="(() => {
+                                const liga = movements.filter(m => m && m.type === 'transfer' && (m.buyer === 'LALIGA' || m.seller === 'LALIGA')).length;
+                                const inter = movements.filter(m => m && m.type === 'transfer' && m.buyer !== 'LALIGA' && m.seller !== 'LALIGA').length;
+                                return liga + ' / ' + inter;
+                            })()"></p>
+                        <p class="text-xs text-gray-400">LALIGA / Entre Managers</p>
+                    </div>
+                    <div class="p-4 bg-gray-800/40 rounded-lg">
+                        <p class="text-xs text-gray-500 uppercase">Total Premios Cobrados</p>
+                        <p class="text-xl font-bold text-yellow-400"
+                            x-text="formatMoney(movements.filter(m => m && m.type === 'reward').reduce((s,m) => s + (m.amount || 0), 0))">
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
