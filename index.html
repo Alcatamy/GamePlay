@@ -1692,6 +1692,9 @@
                         if (val === 'dashboard') {
                             this.$nextTick(() => this.updateCharts());
                         }
+                        if (val === 'stats') {
+                            this.$nextTick(() => this.updateStatsCharts());
+                        }
                     });
 
                     // Initial chart render after data loads
@@ -3204,7 +3207,7 @@
                     return date;
                 },
 
-                updateCharts() {
+                updateStatsCharts() {
                     const ctx = document.getElementById('patrimonyChart');
                     if (!ctx) return;
 
@@ -3375,6 +3378,58 @@
                                 scales: {
                                     x: { grid: { display: false }, ticks: { color: '#aaa' } },
                                     y: { grid: { color: '#333' }, ticks: { color: '#aaa', precision: 0 } }
+                                }
+                            }
+                        });
+                    }
+
+                    // Rewards Chart - Bar chart showing rewards by manager
+                    const rewardsCtx = document.getElementById('rewardsChart');
+                    if (rewardsCtx) {
+                        if (window.rewardsChart && typeof window.rewardsChart.destroy === 'function') window.rewardsChart.destroy();
+
+                        // Calculate rewards per manager
+                        const rewardsByManager = {};
+                        Object.keys(this.managers).forEach(m => { rewardsByManager[m] = 0; });
+
+                        this.movements.filter(m => m && m.type === 'reward').forEach(m => {
+                            if (rewardsByManager[m.beneficiary] !== undefined) {
+                                rewardsByManager[m.beneficiary] += (m.amount || 0);
+                            }
+                        });
+
+                        const rewardLabels = Object.keys(rewardsByManager);
+                        const rewardData = rewardLabels.map(l => rewardsByManager[l]);
+
+                        const rewardColors = {
+                            "Vigar FC": '#00f3ff',
+                            "GOLENCIERRO FC": '#00ff9d',
+                            "Pablinistan FC": '#ff00d4',
+                            "Alcatamy eSports By": '#bc13fe',
+                            "Visite La Manga FC": '#ffff00',
+                            "Morenazos FC": '#ff0000'
+                        };
+
+                        window.rewardsChart = new Chart(rewardsCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: rewardLabels.map(l => l.split(' ')[0]),
+                                datasets: [{
+                                    label: 'Ingresos por Premios',
+                                    data: rewardData,
+                                    backgroundColor: rewardLabels.map(l => (rewardColors[l] || '#888') + '80'),
+                                    borderColor: rewardLabels.map(l => rewardColors[l] || '#888'),
+                                    borderWidth: 2,
+                                    borderRadius: 6
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { legend: { display: false } },
+                                scales: {
+                                    x: { grid: { display: false }, ticks: { color: '#aaa' } },
+                                    y: { grid: { color: '#333' }, ticks: { color: '#aaa' } }
                                 }
                             }
                         });
