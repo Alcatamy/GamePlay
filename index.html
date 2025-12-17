@@ -295,7 +295,8 @@
                         </thead>
                         <tbody class="divide-y divide-gray-800">
                             <template x-for="m in sortedManagers" :key="m.name">
-                                <tr class="hover:bg-white/5 transition-colors group">
+                                <tr class="hover:bg-white/5 transition-colors group cursor-pointer"
+                                    @click="selectedManagerDetail = m.name; showManagerModal = true">
                                     <td class="px-6 py-4">
                                         <div class="flex items-center gap-3">
                                             <div class="w-8 h-8 rounded bg-gray-800 flex items-center justify-center font-bold text-gray-300 border border-gray-700"
@@ -415,11 +416,12 @@
                                         <th class="p-3">Tipo</th>
                                         <th class="p-3">Detalle</th>
                                         <th class="p-3 text-right">Cantidad</th>
+                                        <th class="p-3 text-right">Acción</th>
                                     </tr>
                                 </thead>
                                 <tbody class="divide-y divide-gray-700 bg-gray-900/50">
-                                    <template x-for="pm in pendingMovements" :key="pm.id">
-                                        <tr>
+                                    <template x-for="(pm, index) in pendingMovements" :key="pm.id">
+                                        <tr class="hover:bg-red-500/5 transition-colors group">
                                             <td class="p-3 font-mono text-xs text-gray-500" x-text="pm.date"></td>
                                             <td class="p-3">
                                                 <span class="px-2 py-0.5 rounded text-xs font-bold"
@@ -434,15 +436,27 @@
                                                             x-text="pm.buyer"></span>
                                                     </span>
                                                 </div>
-                                                <div x-show="pm.type === 'reward'">
+                                                <div x-show="pm.type === 'reward' || pm.type === 'shield'">
                                                     <span x-text="pm.beneficiary" class="font-bold"></span>
                                                     <span class="text-xs text-gray-500 block"
-                                                        x-text="pm.subtype"></span>
+                                                        x-text="pm.subtype || pm.details"></span>
                                                 </div>
                                             </td>
                                             <td class="p-3 text-right font-mono"
                                                 :class="pm.type === 'transfer' ? 'text-neon-green' : 'text-neon-purple'"
                                                 x-text="formatMoney(pm.amount)"></td>
+                                            <td class="p-3 text-right">
+                                                <button @click="removePendingMovement(index)"
+                                                    class="p-1 hover:bg-red-500/20 text-gray-500 hover:text-red-400 rounded transition-colors"
+                                                    title="Eliminar de la importación">
+                                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24"
+                                                        stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                                            stroke-width="2"
+                                                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
+                                            </td>
                                         </tr>
                                     </template>
                                 </tbody>
@@ -1392,7 +1406,7 @@
                             <h4 class="font-bold text-lg text-white mb-4">📋 Últimos Movimientos</h4>
                             <div class="space-y-2 max-h-64 overflow-y-auto">
                                 <template
-                                    x-for="mov in movements.filter(m => m.buyer === selectedManagerDetail || m.seller === selectedManagerDetail).slice(0, 20)"
+                                    x-for="mov in movements.filter(m => (m.buyer && m.buyer.trim() === selectedManagerDetail.trim()) || (m.seller && m.seller.trim() === selectedManagerDetail.trim())).slice(0, 20)"
                                     :key="mov.date + mov.player">
                                     <div
                                         class="flex justify-between items-center p-2 bg-gray-800/50 rounded-lg text-sm">
@@ -2687,22 +2701,27 @@
                         if (match) {
                             const [_, actor, action, player, otherParty, amountStr] = match;
                             const amount = parseInt(amountStr.replace(/\./g, ''));
-                            const buyer = action === 'comprado' ? actor.trim() : otherParty.trim();
-                            const seller = action === 'comprado' ? otherParty.trim() : actor.trim();
+
+                            // Cleanup function for names
+                            const cleanName = (name) => name.replace(/Operación de mercado\s*/gi, '').trim();
+
+                            const buyer = cleanName(action === 'comprado' ? actor : otherParty);
+                            const seller = cleanName(action === 'comprado' ? otherParty : actor);
+                            const cleanedPlayer = cleanName(player);
                             const normalizedDateForId = normalizeDate(dateKey);
 
                             const newMov = {
-                                id: `transfer_${normalizedDateForId}_${buyer}_${seller}_${player}_${amount}`,
+                                id: `transfer_${normalizedDateForId}_${buyer}_${seller}_${cleanedPlayer}_${amount}`,
                                 type: 'transfer',
                                 buyer,
                                 seller,
-                                player,
+                                player: cleanedPlayer,
                                 amount,
                                 date: normalizedDateForId
                             };
 
                             // Duplicate Check (Robust)
-                            const sig = `${player}_${amount}`;
+                            const sig = `${cleanedPlayer}_${amount}`;
                             const potentials = existingSignatureMap.get(sig);
                             let isDup = false;
 
@@ -2835,6 +2854,11 @@
                     } else {
                         this.addLog(`No se detectaron movimientos nuevos (${elapsed}ms).`, 'warning');
                     }
+                },
+
+                removePendingMovement(index) {
+                    this.pendingMovements.splice(index, 1);
+                    this.addLog('Movimiento eliminado de la vista previa', 'info');
                 },
 
                 confirmImport() {
