@@ -95,6 +95,10 @@
         ::-webkit-scrollbar-thumb:hover {
             background: #4b5563;
         }
+
+        [x-cloak] {
+            display: none !important;
+        }
     </style>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -1179,11 +1183,21 @@
 
         <!-- =============== MARKET EXPLORER TAB =============== -->
         <div x-show="currentTab === 'market'" x-cloak class="space-y-6">
-            <h2 class="text-2xl font-bold text-cyan-400 flex items-center gap-2">
-                📈 Explorador de Mercado
-                <span class="text-sm font-normal text-gray-400"
-                    x-text="'(' + Object.keys(marketData).length + ' jugadores)'"></span>
-            </h2>
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-cyan-400 flex items-center gap-2">
+                    📈 Explorador de Mercado
+                    <span class="text-sm font-normal text-gray-400"
+                        x-text="'(' + Object.keys(marketData).length + ' jugadores)'"></span>
+                </h2>
+                <button @click="updateMarketData()"
+                    class="px-4 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 border border-cyan-500/50 rounded-lg text-sm font-bold flex items-center gap-2 transition-all hover:scale-105 active:scale-95">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Actualizar Mercado
+                </button>
+            </div>
 
             <!-- Filters & Sorting -->
             <div class="glass-panel p-4 rounded-xl">
@@ -3082,6 +3096,15 @@
                         this.rawInput = '';
                     } else {
                         this.addLog(`No se detectaron movimientos nuevos (${elapsed}ms).`, 'warning');
+                    }
+                },
+
+                updateMarketData: function () {
+                    const confirm = window.confirm("⚠️ Para actualizar los precios reales:\n\n1. Ejecuta 'python scrape_market.py' en tu terminal.\n2. Espera a que termine.\n3. Pulsa Aceptar aquí o el botón de refrescar.\n\nEl sistema recargará los datos más recientes.");
+                    if (confirm) {
+                        this.addLog("Recargando datos de mercado...", "info");
+                        // Force reload with cache busting
+                        window.location.reload(true);
                     }
                 },
 
