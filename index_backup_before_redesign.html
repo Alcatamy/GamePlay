@@ -8,13 +8,8 @@
     <link rel="icon"
         href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>">
 
-    <!-- Google Fonts & Material Symbols -->
-    <link
-        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Noto+Sans:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-        rel="stylesheet" />
-
     <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -22,37 +17,35 @@
                 extend: {
                     animation: {
                         'gradient-x': 'gradient-x 3s ease infinite',
-                        'pulse-glow': 'pulse-glow 2s ease-in-out infinite',
                     },
                     keyframes: {
                         'gradient-x': {
-                            '0%, 100%': { 'background-size': '200% 200%', 'background-position': 'left center' },
-                            '50%': { 'background-size': '200% 200%', 'background-position': 'right center' },
-                        },
-                        'pulse-glow': {
-                            '0%, 100%': { 'box-shadow': '0 0 20px rgba(70, 236, 19, 0.3)' },
-                            '50%': { 'box-shadow': '0 0 30px rgba(70, 236, 19, 0.5)' },
+                            '0%, 100%': {
+                                'background-size': '200% 200%',
+                                'background-position': 'left center'
+                            },
+                            '50%': {
+                                'background-size': '200% 200%',
+                                'background-position': 'right center'
+                            },
                         },
                     },
                     colors: {
-                        "primary": "#46ec13",
-                        "primary-dark": "#3bc910",
-                        "background-dark": "#0a0a0a",
-                        "surface-dark": "#131811",
-                        "surface-accent": "#1f291c",
-                        "accent-red": "#ff3b30",
-                        "text-secondary": "#9cabba",
-                        gray: { 850: '#1f2937', 900: '#111827', 950: '#030712' },
-                        neon: { blue: '#00f3ff', green: '#00ff9d', pink: '#ff00d4', purple: '#bc13fe' }
+                        gray: {
+                            850: '#1f2937',
+                            900: '#111827',
+                            950: '#030712',
+                        },
+                        neon: {
+                            blue: '#00f3ff',
+                            green: '#00ff9d',
+                            pink: '#ff00d4',
+                            purple: '#bc13fe'
+                        }
                     },
                     fontFamily: {
-                        "display": ["Space Grotesk", "sans-serif"],
-                        "body": ["Noto Sans", "sans-serif"],
-                        "market": ["Manrope", "sans-serif"],
-                        "mono": ["ui-monospace", "SFMono-Regular", "Menlo", "Monaco", "Consolas", "monospace"],
-                        sans: ['Space Grotesk', 'sans-serif'],
-                    },
-                    borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px" },
+                        sans: ['Inter', 'sans-serif'],
+                    }
                 }
             }
         }
@@ -69,164 +62,120 @@
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
     <script src="market_data.js"></script>
     <script src="movements_data.js"></script>
+    <!-- Chart.js for Data Visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
-        /* Custom Scrollbar - Premium Style */
-        ::-webkit-scrollbar {
-            width: 4px;
-            height: 4px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: #0a0a0a;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #333;
-            border-radius: 2px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #46ec13;
-        }
-
-        .hide-scrollbar::-webkit-scrollbar,
-        .no-scrollbar::-webkit-scrollbar {
-            display: none;
-        }
-
-        .hide-scrollbar,
-        .no-scrollbar {
-            -ms-overflow-style: none;
-            scrollbar-width: none;
-        }
-
-        .material-symbols-outlined {
-            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
 
         body {
-            min-height: 100vh;
-            font-family: 'Space Grotesk', sans-serif;
+            font-family: 'Inter', sans-serif;
         }
 
         .glass-panel {
-            background: rgba(19, 24, 17, 0.8);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(31, 41, 55, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .glow-primary {
-            box-shadow: 0 0 20px rgba(70, 236, 19, 0.3);
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
         }
 
-        .glow-primary-hover:hover {
-            box-shadow: 0 0 30px rgba(70, 236, 19, 0.5);
+        ::-webkit-scrollbar-track {
+            background: #111827;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4b5563;
         }
 
         [x-cloak] {
             display: none !important;
         }
     </style>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="market_data.js"></script>
 </head>
 
-<body class="bg-background-dark text-white min-h-screen selection:bg-primary selection:text-black font-display"
-    x-data="gamePlayApp()" x-init="initApp()">
+<body class="bg-gray-950 text-gray-100 min-h-screen selection:bg-neon-blue selection:text-black" x-data="gamePlayApp()"
+    x-init="initApp()">
 
     <!-- Navbar -->
-    <nav class="sticky top-0 z-50 bg-background-dark/95 backdrop-blur-md border-b border-white/10">
+    <nav class="sticky top-0 z-50 glass-panel border-b border-gray-800">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
                 <!-- Logo -->
-                <div class="flex items-center gap-3">
-                    <div class="relative">
-                        <div
-                            class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/30 to-primary/10 flex items-center justify-center text-primary shadow-[0_0_15px_rgba(70,236,19,0.3)]">
-                            <span class="material-symbols-outlined">sports_soccer</span>
-                        </div>
-                        <div
-                            class="absolute -bottom-0.5 -right-0.5 size-3 bg-primary rounded-full border-2 border-background-dark">
-                        </div>
-                    </div>
-                    <div>
-                        <h2 class="text-white text-lg font-bold leading-none tracking-tight">GAMEPLAY</h2>
-                        <span class="text-[10px] text-primary font-medium tracking-widest uppercase">Finance</span>
-                    </div>
-                    <!-- Sync Status -->
-                    <span class="flex items-center gap-1 text-xs ml-2"
+                <div class="flex items-center gap-2 sm:gap-3">
+                    <div
+                        class="w-8 h-8 rounded bg-gradient-to-br from-neon-blue to-neon-purple flex items-center justify-center font-bold text-black text-xs">
+                        GP</div>
+                    <span
+                        class="font-bold text-lg sm:text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-neon-blue to-neon-purple">GamePlay</span>
+                    <span
+                        class="hidden sm:inline ml-1 px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-400 text-[10px] tracking-widest font-bold border border-yellow-500/30 uppercase">Premium</span>
+                    <!-- Sync Status Indicator -->
+                    <span class="flex items-center gap-1 text-xs"
                         :title="syncStatus === 'synced' ? 'Sincronizado con Firebase' : syncStatus === 'syncing' ? 'Guardando...' : 'Error de sincronización'">
-                        <span x-show="syncStatus === 'synced'" class="text-primary">
-                            <span class="material-symbols-outlined text-sm">cloud_done</span>
-                        </span>
-                        <span x-show="syncStatus === 'syncing'" class="text-yellow-400 animate-pulse">
-                            <span class="material-symbols-outlined text-sm">sync</span>
-                        </span>
-                        <span x-show="syncStatus === 'error'" class="text-accent-red">
-                            <span class="material-symbols-outlined text-sm">cloud_off</span>
-                        </span>
+                        <span x-show="syncStatus === 'synced'" class="text-green-400">✓</span>
+                        <span x-show="syncStatus === 'syncing'" class="text-yellow-400 animate-pulse">⟳</span>
+                        <span x-show="syncStatus === 'error'" class="text-red-400">✗</span>
                     </span>
+                    <button @click="loadData(); addLog('Datos recargados manualmente', 'info');"
+                        class="ml-2 p-1 text-gray-400 hover:text-white transition-colors"
+                        title="Recargar Datos Manualmente">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                    </button>
                 </div>
 
                 <!-- Desktop Navigation -->
-                <div class="hidden lg:flex items-center gap-1">
-                    <button @click="currentTab = 'dashboard'"
-                        :class="currentTab === 'dashboard' ? 'bg-primary/10 text-primary' : 'text-gray-400 hover:text-white hover:bg-white/5'"
-                        class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2">
-                        <span class="material-symbols-outlined text-lg">dashboard</span>
-                        Dashboard
+                <div class="hidden lg:flex space-x-3 xl:space-x-4">
+                    <button @click="currentTab = 'dashboard'" :class="{'text-neon-blue': currentTab === 'dashboard'}"
+                        class="hover:text-white transition-colors text-sm font-medium px-2 py-1">Dashboard</button>
+                    <button @click="currentTab = 'parser'" :class="{'text-neon-green': currentTab === 'parser'}"
+                        class="hover:text-white transition-colors text-sm font-medium px-2 py-1">Parser</button>
+                    <button @click="currentTab = 'stats'" :class="{'text-neon-pink': currentTab === 'stats'}"
+                        class="hover:text-white transition-colors text-sm font-medium px-2 py-1">Stats</button>
+                    <button @click="currentTab = 'clauses'" :class="{'text-neon-purple': currentTab === 'clauses'}"
+                        class="hover:text-white transition-colors text-sm font-medium px-2 py-1">Cláusulas</button>
+                    <button @click="currentTab = 'market'" :class="{'text-cyan-400': currentTab === 'market'}"
+                        class="hover:text-white transition-colors text-sm font-medium px-2 py-1 flex items-center gap-1">
+                        <span>📈</span> Mercado
                     </button>
-                    <button @click="currentTab = 'parser'"
-                        :class="currentTab === 'parser' ? 'bg-primary/10 text-primary' : 'text-gray-400 hover:text-white hover:bg-white/5'"
-                        class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2">
-                        <span class="material-symbols-outlined text-lg">bolt</span>
-                        Parser
+                    <button @click="currentTab = 'movements'" :class="{'text-orange-400': currentTab === 'movements'}"
+                        class="hover:text-white transition-colors text-sm font-medium px-2 py-1 flex items-center gap-1">
+                        <span>📋</span> Historial
                     </button>
-                    <button @click="currentTab = 'stats'"
-                        :class="currentTab === 'stats' ? 'bg-primary/10 text-primary' : 'text-gray-400 hover:text-white hover:bg-white/5'"
-                        class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2">
-                        <span class="material-symbols-outlined text-lg">analytics</span>
-                        Stats
-                    </button>
-                    <button @click="currentTab === 'clauses'"
-                        :class="currentTab === 'clauses' ? 'bg-primary/10 text-primary' : 'text-gray-400 hover:text-white hover:bg-white/5'"
-                        class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2">
-                        <span class="material-symbols-outlined text-lg">gavel</span>
-                        Cláusulas
-                    </button>
-                    <button @click="currentTab = 'market'"
-                        :class="currentTab === 'market' ? 'bg-primary/10 text-primary' : 'text-gray-400 hover:text-white hover:bg-white/5'"
-                        class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2">
-                        <span class="material-symbols-outlined text-lg">query_stats</span>
-                        Mercado
-                    </button>
-                    <button @click="currentTab = 'movements'"
-                        :class="currentTab === 'movements' ? 'bg-primary/10 text-primary' : 'text-gray-400 hover:text-white hover:bg-white/5'"
-                        class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2">
-                        <span class="material-symbols-outlined text-lg">swap_horiz</span>
-                        Historial
-                    </button>
-                    <button @click="currentTab = 'advanced'"
-                        :class="currentTab === 'advanced' ? 'bg-primary/10 text-primary' : 'text-gray-400 hover:text-white hover:bg-white/5'"
-                        class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2">
-                        <span class="material-symbols-outlined text-lg">insights</span>
-                        Métricas
+                    <button @click="currentTab = 'advanced'" :class="{'text-yellow-400': currentTab === 'advanced'}"
+                        class="hover:text-white transition-colors text-sm font-medium px-2 py-1 flex items-center gap-1">
+                        <span>🚀</span> Métricas
                     </button>
                 </div>
 
-                <!-- Right Side Actions -->
-                <div class="flex items-center gap-2">
-                    <button @click="loadData(); addLog('Datos recargados manualmente', 'info');"
-                        class="flex items-center justify-center size-10 rounded-full bg-surface-accent text-gray-400 hover:text-primary transition-colors"
-                        title="Recargar Datos">
-                        <span class="material-symbols-outlined">refresh</span>
-                    </button>
-                    <!-- Mobile Menu Button -->
-                    <button @click="mobileMenuOpen = !mobileMenuOpen"
-                        class="lg:hidden flex items-center justify-center size-10 rounded-full bg-surface-accent text-gray-400 hover:text-white transition-colors">
-                        <span x-show="!mobileMenuOpen" class="material-symbols-outlined">menu</span>
-                        <span x-show="mobileMenuOpen" x-cloak class="material-symbols-outlined">close</span>
-                    </button>
-                </div>
+                <!-- Mobile Menu Button -->
+                <button @click="mobileMenuOpen = !mobileMenuOpen"
+                    class="lg:hidden p-2 rounded-lg hover:bg-gray-800 transition-colors">
+                    <svg x-show="!mobileMenuOpen" class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                    <svg x-show="mobileMenuOpen" x-cloak class="w-6 h-6 text-gray-300" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
             </div>
         </div>
 
@@ -235,248 +184,230 @@
             x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0"
             x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0"
             x-transition:leave-end="opacity-0 -translate-y-2"
-            class="lg:hidden border-t border-white/10 bg-background-dark/95 backdrop-blur-xl">
-            <div class="grid grid-cols-2 gap-2 p-4">
+            class="lg:hidden border-t border-gray-800 bg-gray-900/95 backdrop-blur-xl">
+            <div class="grid grid-cols-2 gap-1 p-3">
                 <button @click="currentTab = 'dashboard'; mobileMenuOpen = false"
-                    :class="currentTab === 'dashboard' ? 'bg-primary/20 text-primary border-primary/50' : 'bg-surface-dark text-gray-300 border-white/5'"
+                    :class="currentTab === 'dashboard' ? 'bg-neon-blue/20 text-neon-blue border-neon-blue' : 'bg-gray-800/50 text-gray-300 border-transparent'"
                     class="p-3 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined text-lg">dashboard</span>
-                    Dashboard
+                    📊 Dashboard
                 </button>
                 <button @click="currentTab = 'parser'; mobileMenuOpen = false"
-                    :class="currentTab === 'parser' ? 'bg-primary/20 text-primary border-primary/50' : 'bg-surface-dark text-gray-300 border-white/5'"
+                    :class="currentTab === 'parser' ? 'bg-neon-green/20 text-neon-green border-neon-green' : 'bg-gray-800/50 text-gray-300 border-transparent'"
                     class="p-3 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined text-lg">bolt</span>
-                    Parser
+                    ✨ Parser
                 </button>
                 <button @click="currentTab = 'stats'; mobileMenuOpen = false"
-                    :class="currentTab === 'stats' ? 'bg-primary/20 text-primary border-primary/50' : 'bg-surface-dark text-gray-300 border-white/5'"
+                    :class="currentTab === 'stats' ? 'bg-neon-pink/20 text-neon-pink border-neon-pink' : 'bg-gray-800/50 text-gray-300 border-transparent'"
                     class="p-3 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined text-lg">analytics</span>
-                    Stats
+                    📈 Stats
                 </button>
                 <button @click="currentTab = 'clauses'; mobileMenuOpen = false"
-                    :class="currentTab === 'clauses' ? 'bg-primary/20 text-primary border-primary/50' : 'bg-surface-dark text-gray-300 border-white/5'"
+                    :class="currentTab === 'clauses' ? 'bg-neon-purple/20 text-neon-purple border-neon-purple' : 'bg-gray-800/50 text-gray-300 border-transparent'"
                     class="p-3 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined text-lg">gavel</span>
-                    Cláusulas
+                    ⚖️ Cláusulas
                 </button>
                 <button @click="currentTab = 'market'; mobileMenuOpen = false"
-                    :class="currentTab === 'market' ? 'bg-primary/20 text-primary border-primary/50' : 'bg-surface-dark text-gray-300 border-white/5'"
+                    :class="currentTab === 'market' ? 'bg-cyan-400/20 text-cyan-400 border-cyan-400' : 'bg-gray-800/50 text-gray-300 border-transparent'"
                     class="p-3 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined text-lg">query_stats</span>
-                    Mercado
+                    📈 Mercado
                 </button>
                 <button @click="currentTab = 'movements'; mobileMenuOpen = false"
-                    :class="currentTab === 'movements' ? 'bg-primary/20 text-primary border-primary/50' : 'bg-surface-dark text-gray-300 border-white/5'"
+                    :class="currentTab === 'movements' ? 'bg-orange-400/20 text-orange-400 border-orange-400' : 'bg-gray-800/50 text-gray-300 border-transparent'"
                     class="p-3 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined text-lg">swap_horiz</span>
-                    Historial
+                    📋 Historial
                 </button>
                 <button @click="currentTab = 'advanced'; mobileMenuOpen = false"
-                    :class="currentTab === 'advanced' ? 'bg-primary/20 text-primary border-primary/50' : 'bg-surface-dark text-gray-300 border-white/5'"
+                    :class="currentTab === 'advanced' ? 'bg-yellow-400/20 text-yellow-400 border-yellow-400' : 'bg-gray-800/50 text-gray-300 border-transparent'"
                     class="col-span-2 p-3 rounded-xl text-sm font-medium border transition-all flex items-center justify-center gap-2">
-                    <span class="material-symbols-outlined text-lg">insights</span>
-                    Métricas Avanzadas
+                    🚀 Métricas Avanzadas
                 </button>
             </div>
         </div>
     </nav>
 
     <!-- Main Content -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         <!-- DASHBOARD VIEW -->
         <div x-show="currentTab === 'dashboard'" x-transition.opacity>
+            <!-- Header Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <!-- Total Mercado -->
+                <div class="glass-panel rounded-xl p-6 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <svg class="w-16 h-16 text-neon-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z">
+                            </path>
+                        </svg>
+                    </div>
+                    <p class="text-sm text-gray-400 font-medium">Dinero en Juego (Total Saldos)</p>
+                    <h3 class="text-2xl font-bold mt-2 text-neon-blue" x-text="formatMoney(calculateTotalBalance())">
+                    </h3>
+                </div>
 
-            <!-- Market Overview Header -->
-            <section class="flex flex-col gap-3 mb-6">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-text-secondary text-xs font-bold uppercase tracking-widest">Market Overview</h3>
+                <!-- Total Valor Equipos -->
+                <div class="glass-panel rounded-xl p-6 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <svg class="w-16 h-16 text-neon-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z">
+                            </path>
+                        </svg>
+                    </div>
+                    <p class="text-sm text-gray-400 font-medium">Valor Total Plantillas</p>
+                    <h3 class="text-2xl font-bold mt-2 text-neon-green" x-text="formatMoney(calculateTotalTeamValue())">
+                    </h3>
+                </div>
+
+                <!-- Movimientos Registrados -->
+                <div class="glass-panel rounded-xl p-6 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <svg class="w-16 h-16 text-neon-pink" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                        </svg>
+                    </div>
+                    <p class="text-sm text-gray-400 font-medium">Movimientos Procesados</p>
+                    <h3 class="text-2xl font-bold mt-2 text-neon-pink" x-text="getTotalMovements()"></h3>
+                </div>
+
+                <!-- Gasto en Cláusulas -->
+                <div class="glass-panel rounded-xl p-6 relative overflow-hidden group">
+                    <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                        <svg class="w-16 h-16 text-neon-purple" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z">
+                            </path>
+                        </svg>
+                    </div>
+                    <p class="text-sm text-gray-400 font-medium">Gasto Total Cláusulas</p>
+                    <h3 class="text-2xl font-bold mt-2 text-neon-purple" x-text="formatMoney(calculateTotalClauses())">
+                    </h3>
+                </div>
+            </div>
+
+            <!-- Main Table -->
+            <div class="glass-panel rounded-xl overflow-hidden shadow-2xl">
+                <div class="px-6 py-4 border-b border-gray-700 bg-gray-900/50 flex justify-between items-center">
+                    <h2 class="text-lg font-bold text-white">Clasificación Financiera</h2>
                     <span class="text-xs text-gray-500 flex items-center gap-1">
-                        <span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+                        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
                         En vivo
                     </span>
                 </div>
-
-                <!-- KPI Cards - Horizontal Scroll -->
-                <div class="flex overflow-x-auto gap-4 pb-2 snap-x hide-scrollbar -mx-4 px-4">
-                    <!-- Total Liquidity -->
-                    <div class="snap-center min-w-[200px] flex-1 flex flex-col gap-1 rounded-xl p-4 bg-surface-dark border border-white/10 shadow-sm relative overflow-hidden group cursor-pointer hover:border-primary/30 transition-all"
-                        @click="currentTab = 'market'">
-                        <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <span class="material-symbols-outlined text-4xl text-primary">account_balance_wallet</span>
-                        </div>
-                        <p class="text-text-secondary text-xs font-medium uppercase tracking-wider">Total Liquidez</p>
-                        <p class="text-white text-2xl font-bold font-display"
-                            x-text="formatMoney(calculateTotalBalance())"></p>
-                        <div class="flex items-center gap-1 text-primary text-xs font-bold">
-                            <span class="material-symbols-outlined text-sm">trending_up</span>
-                            <span>Activo</span>
-                        </div>
-                    </div>
-
-                    <!-- Team Value -->
-                    <div
-                        class="snap-center min-w-[200px] flex-1 flex flex-col gap-1 rounded-xl p-4 bg-surface-dark border border-white/10 shadow-sm relative overflow-hidden group">
-                        <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <span class="material-symbols-outlined text-4xl text-primary">groups</span>
-                        </div>
-                        <p class="text-text-secondary text-xs font-medium uppercase tracking-wider">Valor Plantillas</p>
-                        <p class="text-white text-2xl font-bold font-display"
-                            x-text="formatMoney(calculateTotalTeamValue())"></p>
-                        <div class="flex items-center gap-1 text-primary text-xs font-bold">
-                            <span class="material-symbols-outlined text-sm">trending_up</span>
-                            <span>6 equipos</span>
-                        </div>
-                    </div>
-
-                    <!-- Movements -->
-                    <div class="snap-center min-w-[200px] flex-1 flex flex-col gap-1 rounded-xl p-4 bg-surface-dark border border-white/10 shadow-sm relative overflow-hidden group"
-                        @click="currentTab = 'movements'">
-                        <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <span class="material-symbols-outlined text-4xl text-neon-blue">swap_horiz</span>
-                        </div>
-                        <p class="text-text-secondary text-xs font-medium uppercase tracking-wider">Operaciones</p>
-                        <p class="text-white text-2xl font-bold font-display" x-text="getTotalMovements()"></p>
-                        <div class="flex items-center gap-1 text-neon-blue text-xs font-bold">
-                            <span class="material-symbols-outlined text-sm">history</span>
-                            <span>Historial</span>
-                        </div>
-                    </div>
-
-                    <!-- Clauses -->
-                    <div
-                        class="snap-center min-w-[200px] flex-1 flex flex-col gap-1 rounded-xl p-4 bg-surface-dark border border-white/10 shadow-sm relative overflow-hidden group">
-                        <div class="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                            <span class="material-symbols-outlined text-4xl text-accent-red">gavel</span>
-                        </div>
-                        <p class="text-text-secondary text-xs font-medium uppercase tracking-wider">Gasto Cláusulas</p>
-                        <p class="text-white text-2xl font-bold font-display"
-                            x-text="formatMoney(calculateTotalClauses())"></p>
-                        <div class="flex items-center gap-1 text-accent-red text-xs font-bold">
-                            <span class="material-symbols-outlined text-sm">trending_down</span>
-                            <span>Gastos</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Financial Ranking Table -->
-            <section class="flex flex-col gap-3 mb-6">
-                <div class="flex items-center justify-between">
-                    <h3 class="text-text-secondary text-xs font-bold uppercase tracking-widest">Clasificación Financiera
-                    </h3>
-                    <button @click="currentTab = 'stats'"
-                        class="text-primary text-xs font-bold uppercase tracking-wide hover:underline">Ver
-                        Stats</button>
-                </div>
-
-                <div class="overflow-x-auto pb-4 hide-scrollbar">
-                    <table class="w-full min-w-[600px] border-collapse text-left">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left">
                         <thead>
-                            <tr class="border-b border-white/10 text-xs uppercase tracking-wider text-gray-500">
-                                <th class="p-3 pl-2 font-medium">Rank</th>
-                                <th class="p-3 font-medium">Manager</th>
-                                <th class="p-3 font-medium text-right">Saldo</th>
-                                <th class="p-3 font-medium text-right">V. Equipo</th>
-                                <th class="p-3 font-medium text-right">Patrimonio</th>
-                                <th class="p-3 font-medium text-right text-primary">Puja Máx</th>
+                            <tr class="text-gray-400 text-xs uppercase bg-gray-900/30">
+                                <th class="px-6 py-3 font-semibold">Manager</th>
+                                <th class="px-6 py-3 font-semibold text-right">Saldo Caja</th>
+                                <th class="px-6 py-3 font-semibold text-right">Valor Equipo</th>
+                                <th class="px-6 py-3 font-semibold text-right">Patrimonio</th>
+                                <th class="px-6 py-3 font-semibold text-right text-neon-blue">Puja Máxima</th>
+                                <th class="px-6 py-3 font-semibold text-right text-red-400">Gasto Cláusulas</th>
                             </tr>
                         </thead>
-                        <tbody class="text-sm">
-                            <template x-for="(m, idx) in sortedManagers" :key="m.name">
-                                <tr class="group border-b border-white/5 transition-colors cursor-pointer"
-                                    :class="idx === 0 ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-white/5'"
+                        <tbody class="divide-y divide-gray-800">
+                            <template x-for="m in sortedManagers" :key="m.name">
+                                <tr class="hover:bg-white/5 transition-colors group cursor-pointer"
                                     @click="selectedManagerDetail = m.name; showManagerModal = true">
-                                    <td class="p-3 pl-2 font-mono"
-                                        :class="idx === 0 ? 'text-primary font-bold' : 'text-gray-500'"
-                                        x-text="String(idx + 1).padStart(2, '0')"></td>
-                                    <td class="p-3">
-                                        <div class="flex items-center gap-2">
-                                            <div class="size-7 rounded-full flex items-center justify-center text-[10px] font-bold text-white"
-                                                :class="['bg-primary', 'bg-neon-blue', 'bg-neon-pink', 'bg-neon-purple', 'bg-yellow-500', 'bg-orange-500'][idx] || 'bg-gray-600'"
+                                    <td class="px-6 py-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded bg-gray-800 flex items-center justify-center font-bold text-gray-300 border border-gray-700"
                                                 x-text="m.name.substring(0,2).toUpperCase()"></div>
-                                            <span class="font-medium group-hover:text-primary transition-colors"
-                                                :class="idx === 0 ? 'text-white font-bold' : 'text-gray-200'"
+                                            <span
+                                                class="font-medium text-white group-hover:text-neon-blue transition-colors"
                                                 x-text="m.name"></span>
                                         </div>
                                     </td>
-                                    <td class="p-3 text-right font-mono text-gray-400" x-text="formatMoney(m.balance)">
-                                    </td>
-                                    <td class="p-3 text-right font-mono text-gray-400"
+                                    <td class="px-6 py-4 text-right font-mono text-gray-300"
+                                        x-text="formatMoney(m.balance)"></td>
+                                    <td class="px-6 py-4 text-right font-mono text-gray-300"
                                         x-text="formatMoney(m.teamValue)"></td>
-                                    <td class="p-3 text-right font-mono font-bold text-white"
+                                    <td class="px-6 py-4 text-right font-mono font-bold text-white"
                                         x-text="formatMoney(m.balance + m.teamValue)"></td>
-                                    <td class="p-3 text-right font-mono font-bold text-primary"
+                                    <td class="px-6 py-4 text-right font-mono font-bold text-neon-blue"
                                         x-text="formatMoney(calculateMaxBid(m))"></td>
+                                    <td class="px-6 py-4 text-right font-mono text-red-400"
+                                        x-text="formatMoney(m.clauseExpenses)"></td>
                                 </tr>
                             </template>
                         </tbody>
                     </table>
                 </div>
-            </section>
+            </div>
 
             <!-- CHARTS SECTION -->
-            <section class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
                 <!-- Patrimony Comparison Chart -->
-                <div class="rounded-xl p-5 bg-surface-dark border border-white/10">
-                    <div class="flex items-center gap-2 mb-4">
-                        <span class="material-symbols-outlined text-primary">bar_chart</span>
-                        <h3 class="text-white font-bold">Comparativa de Patrimonio</h3>
-                    </div>
+                <div class="glass-panel rounded-xl p-6">
+                    <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        📊 Comparativa de Patrimonio
+                    </h3>
                     <div class="h-64">
                         <canvas id="patrimonyChart"></canvas>
                     </div>
                 </div>
 
                 <!-- Trading Activity by Day -->
-                <div class="rounded-xl p-5 bg-surface-dark border border-white/10">
-                    <div class="flex items-center gap-2 mb-4">
-                        <span class="material-symbols-outlined text-neon-blue">show_chart</span>
-                        <h3 class="text-white font-bold">Actividad de Fichajes</h3>
-                    </div>
+                <div class="glass-panel rounded-xl p-6">
+                    <h3 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                        📈 Actividad de Fichajes
+                    </h3>
                     <div class="h-64">
                         <canvas id="activityChart"></canvas>
                     </div>
                 </div>
-            </section>
+            </div>
 
         </div>
 
         <!-- MAGIC PARSER VIEW -->
         <div x-show="currentTab === 'parser'" x-transition.opacity>
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <!-- Input Area -->
-                <div class="lg:col-span-2 space-y-4">
-                    <section class="rounded-xl p-5 bg-surface-dark border border-white/10">
-                        <div class="flex flex-wrap justify-between items-center gap-4 mb-4">
-                            <div class="flex items-center gap-2">
-                                <span class="material-symbols-outlined text-primary text-2xl">bolt</span>
-                                <h2 class="text-xl font-bold text-white">Magic Parser</h2>
-                            </div>
+                <div class="lg:col-span-2 space-y-6">
+                    <div class="glass-panel rounded-xl p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                                <svg class="w-5 h-5 text-neon-green" fill="none" viewBox="0 0 24 24"
+                                    stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                                </svg>
+                                Magic Parser
+                            </h2>
                             <div class="flex gap-2">
-                                <!-- Import File Button -->
+                                <!-- Botón Importar Archivo -->
                                 <label
-                                    class="px-4 py-2 bg-surface-accent hover:bg-white/10 text-gray-300 hover:text-white border border-white/10 rounded-lg text-sm font-medium transition-all cursor-pointer flex items-center gap-2">
-                                    <span class="material-symbols-outlined text-lg">cloud_upload</span>
+                                    class="px-4 py-2 bg-neon-blue/10 hover:bg-neon-blue/20 text-neon-blue border border-neon-blue/50 rounded-lg text-sm font-bold transition-all hover:scale-105 active:scale-95 flex items-center gap-2 cursor-pointer">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                    </svg>
                                     Importar .txt
                                     <input type="file" accept=".txt" @change="importFromFile($event)" class="hidden" />
                                 </label>
-                                <!-- Process Button -->
+                                <!-- Botón Procesar Texto -->
                                 <button @click="processInput()"
-                                    class="px-5 py-2 bg-primary hover:bg-primary-dark text-black font-bold rounded-lg text-sm transition-all shadow-[0_0_20px_rgba(70,236,19,0.3)] hover:shadow-[0_0_30px_rgba(70,236,19,0.5)] flex items-center gap-2">
-                                    <span class="material-symbols-outlined text-lg">play_arrow</span>
-                                    Procesar
+                                    class="px-4 py-2 bg-neon-green/10 hover:bg-neon-green/20 text-neon-green border border-neon-green/50 rounded-lg text-sm font-bold transition-all hover:scale-105 active:scale-95 flex items-center gap-2">
+                                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    Procesar Datos
                                 </button>
                             </div>
                         </div>
-                        <p class="text-sm text-text-secondary mb-3">Pega texto directamente desde la app de Fantasy
-                            (Movimientos, valores de equipo, premios).</p>
+                        <p class="text-sm text-gray-400 mb-2">Copia y pega texto directamente desde la app de Fantasy
+                            (Movimientos de mercado, valores de equipo, premios).</p>
                         <textarea x-model="rawInput"
-                            class="w-full h-80 bg-background-dark border border-white/10 rounded-xl p-4 font-mono text-sm text-gray-300 focus:ring-2 focus:ring-primary focus:border-primary outline-none resize-none placeholder:text-gray-600"
-                            placeholder="Pega tus datos aquí..."></textarea>
-                    </section>
+                            class="w-full h-96 bg-gray-900/50 border border-gray-700 rounded-lg p-4 font-mono text-sm text-gray-300 focus:ring-2 focus:ring-neon-blue focus:border-transparent outline-none resize-none"
+                            placeholder="Paste your raw data here..."></textarea>
+                    </div>
 
                     <!-- PREVIEW AREA -->
                     <div x-show="pendingMovements.length > 0" x-transition
@@ -1251,18 +1182,20 @@
         </div>
 
         <!-- =============== MARKET EXPLORER TAB =============== -->
-        <div x-show="currentTab === 'market'" x-cloak class="space-y-4">
-            <div class="flex flex-wrap justify-between items-center gap-3">
-                <div class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary text-2xl">query_stats</span>
-                    <h2 class="text-xl font-bold text-white">Explorador de Mercado</h2>
-                    <span class="text-sm font-normal text-text-secondary"
+        <div x-show="currentTab === 'market'" x-cloak class="space-y-6">
+            <div class="flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-cyan-400 flex items-center gap-2">
+                    📈 Explorador de Mercado
+                    <span class="text-sm font-normal text-gray-400"
                         x-text="'(' + Object.keys(marketData).length + ' jugadores)'"></span>
-                </div>
+                </h2>
                 <button @click="updateMarketData()"
-                    class="px-4 py-2 bg-primary hover:bg-primary-dark text-black font-bold rounded-lg text-sm transition-all shadow-[0_0_15px_rgba(70,236,19,0.25)] flex items-center gap-2">
-                    <span class="material-symbols-outlined text-lg">refresh</span>
-                    Actualizar
+                    class="px-4 py-2 bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 border border-cyan-500/50 rounded-lg text-sm font-bold flex items-center gap-2 transition-all hover:scale-105 active:scale-95">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Actualizar Mercado
                 </button>
             </div>
 
@@ -1435,19 +1368,17 @@
         </div>
 
         <!-- =============== MOVEMENTS HISTORY TAB =============== -->
-        <div x-show="currentTab === 'movements'" x-cloak class="space-y-4">
-            <div class="flex flex-wrap justify-between items-center gap-3">
-                <div class="flex items-center gap-2">
-                    <span class="material-symbols-outlined text-primary text-2xl">history</span>
-                    <h2 class="text-xl font-bold text-white">Historial de Movimientos</h2>
-                    <span class="text-sm font-normal text-text-secondary"
-                        x-text="'(' + movements.length + ' ops)'"></span>
-                </div>
+        <div x-show="currentTab === 'movements'" x-cloak class="space-y-6">
+            <div class="flex justify-between items-center flex-wrap gap-4">
+                <h2 class="text-2xl font-bold text-orange-400 flex items-center gap-2">
+                    📋 Historial de Movimientos
+                    <span class="text-sm font-normal text-gray-400"
+                        x-text="'(' + movements.length + ' operaciones)'"></span>
+                </h2>
                 <div class="flex gap-2">
                     <button @click="resetData()"
-                        class="px-4 py-2 bg-surface-accent hover:bg-white/10 text-gray-400 hover:text-white border border-white/10 rounded-lg text-sm font-medium flex items-center gap-2 transition-all">
-                        <span class="material-symbols-outlined text-lg">restart_alt</span>
-                        Restablecer
+                        class="px-4 py-2 bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-400 border border-yellow-500/50 rounded-lg text-sm font-medium flex items-center gap-2 transition-all">
+                        ⚠️ Restablecer Datos
                     </button>
                     <button @click="removeDuplicates()"
                         class="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/50 rounded-lg text-sm font-medium flex items-center gap-2 transition-all">
@@ -3745,48 +3676,6 @@
             }
         }
     </script>
-
-    <!-- Floating Action Button (FAB) - Quick access to Parser -->
-    <button @click="currentTab = 'parser'; mobileMenuOpen = false"
-        class="fixed z-50 bottom-20 right-4 lg:bottom-6 lg:right-6 size-14 rounded-full bg-primary flex items-center justify-center text-black shadow-[0_0_25px_rgba(70,236,19,0.4)] hover:shadow-[0_0_35px_rgba(70,236,19,0.6)] transition-all hover:scale-110 active:scale-95"
-        title="Añadir Movimientos">
-        <span class="material-symbols-outlined text-2xl">add</span>
-    </button>
-
-    <!-- Mobile Bottom Navigation -->
-    <nav
-        class="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-background-dark/95 backdrop-blur-md border-t border-white/10 px-4 py-2 safe-area-bottom">
-        <div class="flex justify-around items-center max-w-sm mx-auto">
-            <button @click="currentTab = 'dashboard'"
-                class="flex flex-col items-center gap-0.5 p-2 rounded-lg transition-colors min-w-[60px]"
-                :class="currentTab === 'dashboard' ? 'text-primary' : 'text-gray-500 hover:text-gray-300'">
-                <span class="material-symbols-outlined"
-                    :style="currentTab === 'dashboard' ? 'filter: drop-shadow(0 0 6px #46ec13)' : ''">home</span>
-                <span class="text-[10px] font-medium">Home</span>
-            </button>
-            <button @click="currentTab = 'market'"
-                class="flex flex-col items-center gap-0.5 p-2 rounded-lg transition-colors min-w-[60px]"
-                :class="currentTab === 'market' ? 'text-primary' : 'text-gray-500 hover:text-gray-300'">
-                <span class="material-symbols-outlined"
-                    :style="currentTab === 'market' ? 'filter: drop-shadow(0 0 6px #46ec13)' : ''">query_stats</span>
-                <span class="text-[10px] font-medium">Mercado</span>
-            </button>
-            <button @click="currentTab = 'movements'"
-                class="flex flex-col items-center gap-0.5 p-2 rounded-lg transition-colors min-w-[60px]"
-                :class="currentTab === 'movements' ? 'text-primary' : 'text-gray-500 hover:text-gray-300'">
-                <span class="material-symbols-outlined"
-                    :style="currentTab === 'movements' ? 'filter: drop-shadow(0 0 6px #46ec13)' : ''">history</span>
-                <span class="text-[10px] font-medium">Historial</span>
-            </button>
-            <button @click="currentTab = 'stats'"
-                class="flex flex-col items-center gap-0.5 p-2 rounded-lg transition-colors min-w-[60px]"
-                :class="currentTab === 'stats' ? 'text-primary' : 'text-gray-500 hover:text-gray-300'">
-                <span class="material-symbols-outlined"
-                    :style="currentTab === 'stats' ? 'filter: drop-shadow(0 0 6px #46ec13)' : ''">analytics</span>
-                <span class="text-[10px] font-medium">Stats</span>
-            </button>
-        </div>
-    </nav>
 </body>
 
 </html>
