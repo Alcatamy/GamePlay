@@ -1272,6 +1272,7 @@
                                 Importe <span x-show="movementsTab.sortBy === 'amount'"
                                     x-text="movementsTab.sortDir === 'desc' ? '▼' : '▲'"></span>
                             </th>
+                            <th class="px-3 py-2 text-right"></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1298,7 +1299,7 @@
                             });
                             return filtered;
                         })()" :key="mov.id || idx">
-                            <tr class="border-b border-gray-800 hover:bg-gray-800/50">
+                            <tr class="border-b border-gray-800 hover:bg-gray-800/50 group">
                                 <td class="px-3 py-2 text-gray-400 text-xs" x-text="mov.date"></td>
                                 <td class="px-3 py-2">
                                     <span class="px-2 py-0.5 rounded text-xs font-bold" :class="{
@@ -1318,6 +1319,16 @@
                                     x-text="mov.buyer"></td>
                                 <td class="px-3 py-2 text-right font-mono text-yellow-400"
                                     x-text="formatMoney(mov.amount)"></td>
+                                <td class="px-3 py-2 text-right">
+                                    <button @click.stop="deleteMovement(mov.id)"
+                                        class="p-1 hover:bg-red-500/20 text-gray-500 hover:text-red-400 rounded transition-colors opacity-0 group-hover:opacity-100"
+                                        title="Eliminar movimiento">
+                                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                </td>
                             </tr>
                         </template>
                     </tbody>
@@ -2859,6 +2870,18 @@
                 removePendingMovement(index) {
                     this.pendingMovements.splice(index, 1);
                     this.addLog('Movimiento eliminado de la vista previa', 'info');
+                },
+
+                deleteMovement(movId) {
+                    if (!confirm('¿Estás seguro de que quieres eliminar este movimiento?')) return;
+
+                    const idx = this.movements.findIndex(m => m && m.id === movId);
+                    if (idx !== -1) {
+                        const mov = this.movements[idx];
+                        this.movements.splice(idx, 1);
+                        this.addLog(`Movimiento eliminado: ${mov.player || mov.beneficiary || 'N/A'}`, 'info');
+                        this.saveData();
+                    }
                 },
 
                 confirmImport() {
