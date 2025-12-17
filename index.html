@@ -3248,7 +3248,7 @@
                         }
                     });
 
-                    if (window.myChart) window.myChart.destroy();
+                    if (window.myChart && typeof window.myChart.destroy === 'function') window.myChart.destroy();
 
                     window.myChart = new Chart(ctx, {
                         type: 'line',
@@ -3306,7 +3306,7 @@
                     // Activity Chart
                     const ctxActivity = document.getElementById('activityChart');
                     if (ctxActivity) {
-                        if (window.activityChart) window.activityChart.destroy();
+                        if (window.activityChart && typeof window.activityChart.destroy === 'function') window.activityChart.destroy();
 
                         const actLabels = Object.keys(activityByDate).sort((a, b) => {
                             const da = a.split('/'); const db = b.split('/');
