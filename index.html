@@ -1276,7 +1276,7 @@
                     </thead>
                     <tbody>
                         <template x-for="(mov, idx) in (() => {
-                            let filtered = [...movements];
+                            let filtered = [...movements].filter(m => m && typeof m === 'object');
                             if (movementsTab.searchQuery) {
                                 const q = movementsTab.searchQuery.toLowerCase();
                                 filtered = filtered.filter(m => (m.player && m.player.toLowerCase().includes(q)) || (m.buyer && m.buyer.toLowerCase().includes(q)) || (m.seller && m.seller.toLowerCase().includes(q)) || (m.beneficiary && m.beneficiary.toLowerCase().includes(q)));
@@ -3045,7 +3045,7 @@
                                     if (!allowedKeys.includes(k)) delete this.managers[k];
                                 });
 
-                                this.movements = val.movements || [];
+                                this.movements = (val.movements || []).filter(m => m && typeof m === 'object');
 
                                 // MIGRATE MOVEMENTS
                                 let corrected = 0;
@@ -3084,7 +3084,7 @@
                                 if (!allowedKeys.includes(k)) delete this.managers[k];
                             });
 
-                            this.movements = data.movements || [];
+                            this.movements = (data.movements || []).filter(m => m && typeof m === 'object');
                             if (data.marketTrends) this.marketTrends = data.marketTrends;
                             if (data.marketInfo) this.marketInfo = data.marketInfo;
 
