@@ -217,6 +217,170 @@ export async function updateLastUpdate() {
     }
 }
 
+// ============================================
+// CLAUSE SNAPSHOT FUNCTIONS
+// ============================================
+
+/**
+ * Get today's date in YYYY-MM-DD format
+ */
+function getTodayDate() {
+    return new Date().toISOString().split('T')[0]
+}
+
+/**
+ * Save clause snapshot for all players
+ * @param {Array} playersData - Array of player objects with clause info
+ * @returns {Promise<boolean>} Success status
+ */
+export async function saveClauseSnapshot(playersData) {
+    try {
+        const date = getTodayDate()
+        const snapshot = {}
+
+        playersData.forEach(player => {
+            if (player.id && player.buyoutClause) {
+                snapshot[player.id] = {
+                    playerId: player.id,
+                    playerName: player.nickname || player.name,
+                    managerId: player.managerId,
+                    managerName: player.managerName,
+                    buyoutClause: player.buyoutClause,
+                    marketValue: player.marketValue || 0
+                }
+            }
+        })
+
+        const response = await fetch(
+            `${FIREBASE_URL}/fantasy_data/clauseSnapshots/${date}.json`,
+            {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(snapshot)
+            }
+        )
+
+        if (!response.ok) {
+            throw new Error(`Firebase save error: ${response.status}`)
+        }
+
+        console.log(`Saved clause snapshot for ${date} with ${Object.keys(snapshot).length} players`)
+        return true
+    } catch (error) {
+        console.error('Error saving clause snapshot:', error)
+        return false
+    }
+}
+
+/**
+ * Get the most recent clause snapshot (yesterday or earlier)
+ * @returns {Promise<Object|null>} Snapshot data or null
+ */
+export async function getLastClauseSnapshot() {
+    try {
+        // Get list of available snapshots
+        const response = await fetch(`${FIREBASE_URL}/fantasy_data/clauseSnapshots.json?shallow=true`)
+        if (!response.ok) return null
+
+        const dates = await response.json()
+        if (!dates) return null
+
+        // Sort dates descending and get the most recent one that's not today
+        const today = getTodayDate()
+        const sortedDates = Object.keys(dates)
+            .filter(d => d !== today)
+            .sort((a, b) => b.localeCompare(a))
+
+        if (sortedDates.length === 0) return null
+
+        const lastDate = sortedDates[0]
+        const snapshotResponse = await fetch(`${FIREBASE_URL}/fantasy_data/clauseSnapshots/${lastDate}.json`)
+        if (!snapshotResponse.ok) return null
+
+        const snapshot = await snapshotResponse.json()
+        return { date: lastDate, data: snapshot || {} }
+    } catch (error) {
+        console.error('Error fetching last clause snapshot:', error)
+        return null
+    }
+}
+
+/**
+ * Detect clause changes between old snapshot and current data
+ * @param {Object} oldSnapshot - Previous snapshot { playerId: { buyoutClause, marketValue, ... } }
+ * @param {Array} currentPlayers - Current player data array
+ * @returns {Array} Array of detected changes with investment amounts
+ */
+export function detectClauseChanges(oldSnapshot, currentPlayers) {
+    if (!oldSnapshot || !currentPlayers) return []
+
+    const changes = []
+
+    currentPlayers.forEach(player => {
+        const playerId = player.id?.toString()
+        if (!playerId) return
+
+        const oldData = oldSnapshot[playerId]
+        if (!oldData) return // New player, no comparison possible
+
+        const oldClause = oldData.buyoutClause || 0
+        const newClause = player.buyoutClause || 0
+        const marketValue = player.marketValue || 0
+
+        // Detect increase
+        const clauseIncrease = newClause - oldClause
+
+        // Only count as investment if:
+        // 1. There's an increase
+        // 2. New clause is NOT equal to market value (would be auto-update)
+        if (clauseIncrease > 0 && newClause !== marketValue) {
+            changes.push({
+                playerId: player.id,
+                playerName: player.nickname || player.name,
+                managerId: player.managerId,
+                managerName: player.managerName,
+                oldClause,
+                newClause,
+                marketValue,
+                investment: clauseIncrease,
+                isManualInvestment: true
+            })
+        }
+    })
+
+    return changes
+}
+
+/**
+ * Process detected changes and update manager expenses in Firebase
+ * @param {Array} changes - Array of detected clause changes
+ * @returns {Promise<number>} Number of changes processed
+ */
+export async function processClauseChanges(changes) {
+    let processed = 0
+
+    for (const change of changes) {
+        if (!change.managerName || !change.investment) continue
+
+        const success = await addClauseExpense(
+            change.managerName,
+            change.investment,
+            `Subida cláusula ${change.playerName}: ${formatAmount(change.oldClause)} → ${formatAmount(change.newClause)}`
+        )
+
+        if (success) processed++
+    }
+
+    console.log(`Processed ${processed}/${changes.length} clause changes`)
+    return processed
+}
+
+function formatAmount(amount) {
+    if (amount >= 1000000) return `${(amount / 1000000).toFixed(1)}M`
+    if (amount >= 1000) return `${(amount / 1000).toFixed(0)}K`
+    return amount.toString()
+}
+
 export default {
     getManagersData,
     getManagerData,
@@ -224,5 +388,10 @@ export default {
     getClauseHistory,
     deleteClauseHistoryEntry,
     setClauseExpense,
-    updateLastUpdate
+    updateLastUpdate,
+    saveClauseSnapshot,
+    getLastClauseSnapshot,
+    detectClauseChanges,
+    processClauseChanges
 }
+

@@ -26,7 +26,8 @@ import { useMarketAnalytics } from '../hooks/useMarketAnalytics'
 import marketTrendsService from '../services/marketTrendsService'
 
 // Firebase service for clause expenses
-import { getManagersData, addClauseExpense, getClauseHistory, deleteClauseHistoryEntry } from '../services/firebaseService'
+import { getManagersData, addClauseExpense, getClauseHistory, deleteClauseHistoryEntry, saveClauseSnapshot } from '../services/firebaseService'
+import { useClauseDetection } from '../hooks/useClauseDetection'
 
 export default function Intelligence() {
     const { user } = useAuthStore()
@@ -273,6 +274,47 @@ export default function Intelligence() {
     const { getPlayerLabel, topGangas, topSobrevalorados, topEspeculaciones, rankedByValue } = usePlayerValuation(market)
     const { snipingOpportunities, affordableOpportunities, myRisks, stats: clauseStats } = useClauseSniper(rivalTeams, myTeam, myBalance)
     const { topDeals, worstDeals, trendingPlayers, marketVolume, managerRankings } = useMarketAnalytics(activity, market, ranking)
+
+    // Build allPlayers array for clause detection (includes managerId/managerName)
+    const allPlayersForSnapshot = useMemo(() => {
+        const players = []
+        rivalTeams.forEach(team => {
+            team.players?.forEach(p => {
+                players.push({
+                    ...p,
+                    managerId: team.id,
+                    managerName: team.manager
+                })
+            })
+        })
+        // Include my team
+        myTeam.forEach(p => {
+            const myManager = ranking.find(r => (r.userId || r.team?.manager?.id)?.toString() === myUserId?.toString())
+            players.push({
+                ...p,
+                managerId: myManager?.id || myManager?.team?.id,
+                managerName: myManager?.manager || myManager?.team?.manager?.managerName || 'Mi Equipo'
+            })
+        })
+        return players
+    }, [rivalTeams, myTeam, ranking, myUserId])
+
+    // Clause detection hook
+    const {
+        detectedChanges,
+        investmentsByManager,
+        snapshotDate,
+        saveSnapshot,
+        totalDetectedInvestment,
+        changesCount
+    } = useClauseDetection(allPlayersForSnapshot, false) // Don't auto-process, let user review
+
+    // Save snapshot when data loads (once per session)
+    useEffect(() => {
+        if (allPlayersForSnapshot.length > 0 && !loading) {
+            saveSnapshot()
+        }
+    }, [allPlayersForSnapshot, loading])
 
     const formatMoney = (amount) => {
         if (!amount && amount !== 0) return '-'
@@ -530,6 +572,30 @@ export default function Intelligence() {
 
             {activeTab === 'rivals' && (
                 <div className="space-y-6">
+                    {/* Detected Changes Alert */}
+                    {changesCount > 0 && (
+                        <div className="glass-panel rounded-xl p-4 border-l-4 border-orange-500 bg-orange-500/10">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h3 className="font-bold text-orange-400 mb-1 flex items-center gap-2">
+                                        ⚠️ Detectadas {changesCount} subidas de cláusula
+                                        {snapshotDate && <span className="text-xs text-gray-500">(desde {snapshotDate})</span>}
+                                    </h3>
+                                    <p className="text-sm text-gray-400">
+                                        Total inversión detectada: <span className="text-orange-400 font-bold">{formatMoney(totalDetectedInvestment)}</span>
+                                    </p>
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                        {Object.entries(investmentsByManager).map(([manager, data]) => (
+                                            <span key={manager} className="text-xs bg-orange-500/20 text-orange-300 px-2 py-1 rounded">
+                                                {manager}: +{formatMoney(data.total)}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="glass-panel rounded-xl p-4 border-l-4 border-neon-blue">
                         <h3 className="font-bold text-white mb-1">💡 Espionaje Financiero</h3>
                         <p className="text-sm text-gray-400">
