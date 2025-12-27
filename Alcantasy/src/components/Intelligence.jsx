@@ -821,8 +821,9 @@ export default function Intelligence() {
                                     {historyModal.players.map((player, idx) => {
                                         // Calculations
                                         const currentValue = player.marketValue || 0;
-                                        // Busca el precio de compra en el mapa del manager proporcionado
-                                        const purchasePrice = historyModal.managerObj?.purchasedPlayers?.get(player.id?.toString()) || 0;
+                                        // purchasedPlayers is now an Object, not a Map
+                                        const purchasedPlayersObj = historyModal.managerObj?.purchasedPlayers || {};
+                                        const purchasePrice = purchasedPlayersObj[player.id?.toString()] || 0;
                                         const profit = purchasePrice > 0 ? currentValue - purchasePrice : 0;
                                         const profitPercent = purchasePrice > 0 ? (profit / purchasePrice) * 100 : 0;
 

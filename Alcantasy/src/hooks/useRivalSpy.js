@@ -266,6 +266,8 @@ export function useRivalSpy(activityHistory = [], ranking = [], myUserId = null,
 
             return {
                 ...manager,
+                // Convert Map to Object for proper serialization
+                purchasedPlayers: Object.fromEntries(manager.purchasedPlayers),
                 saldoEstimado: saldoEstimado, // Allow negative balance
                 initialBalance, // Debug info
                 clauseExpensesFirebase: clauseExpensesFromFirebase, // Store for display
